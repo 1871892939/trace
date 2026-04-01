@@ -1,0 +1,43 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: core-service
+  
+  # 数据源配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/track?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 88888888
+  
+  # Redis 配置
+  redis:
+    host: localhost
+    port: 6379
+    password: 
+    database: 0
+    timeout: 5000ms
+  
+  # Nacos 配置（暂时注释，单机部署不需要）
+  # cloud:
+  #   nacos:
+  #     discovery:
+  #       server-addr: localhost:8848
+  #     config:
+  #       server-addr: localhost:8848
+  #       file-extension: yaml
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.ncg.model
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# JWT 配置
+jwt:
+  secret: trace-food-safety-secret-key-2026
+  expiration: 7200000  # 2 小时

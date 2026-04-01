@@ -1,17 +1,23 @@
 package com.ncg;
 
-//TIP 要<b>运行</b>代码，请按 <shortcut actionId="Run"/> 或
-// 点击装订区域中的 <icon src="AllIcons.Actions.Execute"/> 图标。
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+/**
+ * Spring Boot 启动类
+ */
+@SpringBootApplication
+@MapperScan("com.ncg.dal.mapper")
+@EnableScheduling
 public class Main {
     public static void main(String[] args) {
-        //TIP 当文本光标位于高亮显示的文本处时按 <shortcut actionId="ShowIntentionActions"/>
-        // 查看 IntelliJ IDEA 建议如何修正。
-        System.out.printf("Hello and welcome!");
-
-        for (int i = 1; i <= 5; i++) {
-            //TIP 按 <shortcut actionId="Debug"/> 开始调试代码。我们已经设置了一个 <icon src="AllIcons.Debugger.Db_set_breakpoint"/> 断点
-            // 但您始终可以通过按 <shortcut actionId="ToggleLineBreakpoint"/> 添加更多断点。
-            System.out.println("i = " + i);
-        }
+        SpringApplication.run(Main.class, args);
+        System.out.println("===========================================");
+        System.out.println("食品安全溯源系统 - Core Service 启动成功！");
+        System.out.println("访问地址：http://localhost:8081");
+        System.out.println("登录接口：POST /api/auth/login");
+        System.out.println("===========================================");
     }
 }

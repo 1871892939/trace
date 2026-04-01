@@ -24,7 +24,7 @@ public class AlertRecord {
     private Long batchId;
     
     /**
-     * 预警类型
+     * 预警类型：TEMP(温度异常)/HUMIDITY(湿度异常)/PESTICIDE(农残超标)/HEAVY_METAL(重金属超标)/MICROBE(微生物超标)/COMPOSITE(综合风险)
      */
     private String alertType;
     

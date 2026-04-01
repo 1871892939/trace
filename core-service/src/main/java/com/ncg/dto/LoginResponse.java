@@ -1,11 +1,13 @@
 package com.ncg.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 /**
  * 登录响应 DTO
  */
 @Data
+@AllArgsConstructor
 public class LoginResponse {
     
     /**
@@ -18,8 +20,8 @@ public class LoginResponse {
      */
     private String role;
     
-    public LoginResponse(String token, String role) {
-        this.token = token;
-        this.role = role;
-    }
+    /**
+     * 用户名
+     */
+    private String username;
 }

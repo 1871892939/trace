@@ -23,9 +23,14 @@ public class RiskAssessment {
     private Long batchId;
     
     /**
-     * 风险等级：Low/Medium/High
+     * 风险等级：Low(低风险 0-40 分)/Medium(中风险 41-70 分)/High(高风险 71-100 分)
      */
     private String riskLevel;
+    
+    /**
+     * 风险评分 (0-100)
+     */
+    private Integer riskScore;
     
     /**
      * 评估日期
@@ -33,7 +38,7 @@ public class RiskAssessment {
     private LocalDate assessmentDate;
     
     /**
-     * 风险因素 (JSON 字符串)
+     * 风险因素 (JSON 字符串，包含各项得分明细)
      */
     private String factors;
 }
