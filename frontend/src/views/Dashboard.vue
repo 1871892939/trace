@@ -1,21 +1,32 @@
 <template>
-  <div class="dashboard">
-    <div class="header">
-      <div class="header-left">
-        <h2>食品安全溯源系统</h2>
+  <div class="main-layout">
+    <Sidebar />
+    <div class="main-area">
+      <div class="topbar">
+        <div class="topbar-left">
+          <h2 class="system-title">食品安全溯源系统</h2>
+        </div>
+        <div class="topbar-right">
+          <div class="user-info">
+            <div class="avatar">{{ userStore.username?.charAt(0)?.toUpperCase() || 'U' }}</div>
+            <span class="username">{{ userStore.username }}</span>
+            <el-tag :type="userStore.isAdmin ? 'danger' : 'success'" size="small" effect="dark">
+              {{ userStore.isAdmin ? '管理员' : '监管员' }}
+            </el-tag>
+          </div>
+          <el-button type="danger" size="default" plain round @click="handleLogout">
+            <el-icon style="margin-right: 4px"><SwitchButton /></el-icon>
+            退出
+          </el-button>
+        </div>
       </div>
-      <div class="header-right">
-        <span class="username">{{ userStore.username }}</span>
-        <el-tag :type="userStore.isAdmin ? 'danger' : 'success'" size="small">
-          {{ userStore.isAdmin ? '管理员' : '监管员' }}
-        </el-tag>
-        <el-button type="danger" size="small" plain @click="handleLogout">
-          退出登录
-        </el-button>
+      <div class="page-content">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </div>
-    </div>
-    <div class="content">
-      <el-empty description="仪表盘开发中，后续迭代完善" />
     </div>
   </div>
 </template>
@@ -24,6 +35,8 @@
 import { useUserStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { SwitchButton } from '@element-plus/icons-vue'
+import Sidebar from '@/components/Sidebar.vue'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -36,41 +49,90 @@ async function handleLogout() {
 </script>
 
 <style scoped>
-.dashboard {
+.main-layout {
+  display: flex;
   min-height: 100vh;
-  background: #f0f2f5;
+  background: #f0f4f8;
 }
 
-.header {
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
   height: 60px;
-  background: #1a3a6b;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 0 28px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+  position: sticky;
+  top: 0;
 }
 
-.header h2 {
+.topbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.system-title {
   margin: 0;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a3a6b;
   letter-spacing: 2px;
 }
 
-.header-right {
+.topbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1a3a6b, #409eff);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .username {
-  color: rgba(255, 255, 255, 0.85);
   font-size: 14px;
+  color: #303133;
+  font-weight: 500;
 }
 
-.content {
-  padding: 32px;
+.page-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

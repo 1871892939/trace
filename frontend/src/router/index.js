@@ -19,6 +19,18 @@ const router = createRouter({
       name: 'Dashboard',
       component: () => import('@/views/Dashboard.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/simulation',
+      name: 'Simulation',
+      component: () => import('@/views/Simulation.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/overview',
+      name: 'Overview',
+      component: () => import('@/views/Overview.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })
