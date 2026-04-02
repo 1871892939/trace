@@ -28,7 +28,7 @@ public class SimulationResponse {
     /**
      * 预警统计
      */
-    private Integer alertCount;
+    private Long alertCount;
 
     /**
      * 风险分布：{ Low: 数量, Medium: 数量, High: 数量 }

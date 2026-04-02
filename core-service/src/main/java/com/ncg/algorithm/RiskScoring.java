@@ -3,6 +3,7 @@ package com.ncg.algorithm;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * 基于规则加权的食品安全风险评分算法
@@ -67,14 +68,6 @@ public class RiskScoring {
         return Math.min(total, 100);
     }
 
-    /**
-     * 兼容旧接口（单条物流记录）
-     */
-    public int calculateRiskScore(BigDecimal pesticide, BigDecimal heavyMetal,
-                                  BigDecimal microbe, BigDecimal temperature, BigDecimal humidity) {
-        return calculateRiskScore(pesticide, heavyMetal, microbe, temperature, humidity);
-    }
-
     // ==================== 检测指标评分 ====================
 
     private int calculateDetectionRisk(BigDecimal pesticide, BigDecimal heavyMetal, BigDecimal microbe) {
@@ -95,7 +88,7 @@ public class RiskScoring {
         if (value.compareTo(limit) <= 0) {
             return 0;
         }
-        double ratio = value.divide(limit, 4, BigDecimal.ROUND_HALF_UP).doubleValue();
+        double ratio = value.divide(limit, 4, RoundingMode.HALF_UP).doubleValue();
         if (ratio <= 2.0) {
             return (int) Math.round(ratio * 30);
         } else if (ratio <= 4.0) {
@@ -125,9 +118,9 @@ public class RiskScoring {
         BigDecimal range = max.subtract(min);
         BigDecimal deviation;
         if (value.compareTo(min) < 0) {
-            deviation = min.subtract(value).divide(range, 4, BigDecimal.ROUND_HALF_UP);
+            deviation = min.subtract(value).divide(range, 4, RoundingMode.HALF_UP);
         } else {
-            deviation = value.subtract(max).divide(range, 4, BigDecimal.ROUND_HALF_UP);
+            deviation = value.subtract(max).divide(range, 4, RoundingMode.HALF_UP);
         }
         return Math.min(100, (int) Math.round(deviation.doubleValue() * 50));
     }
