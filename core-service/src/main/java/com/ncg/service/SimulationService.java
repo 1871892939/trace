@@ -1,8 +1,6 @@
 package com.ncg.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.ncg.dal.mapper.*;
 import com.ncg.dto.SimulationResponse;
 import com.ncg.model.*;
@@ -11,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -30,10 +27,13 @@ public class SimulationService {
     private LogisticsDataMapper logisticsDataMapper;
 
     @Autowired
+    private AlertRecordMapper alertRecordMapper;
+
+    @Autowired
     private RiskAssessmentMapper riskAssessmentMapper;
 
     @Autowired
-    private AlertRecordMapper alertRecordMapper;
+    private DataCleanService dataCleanService;
 
     private static final String[] ORIGINS = {
             "北京", "上海", "广州", "深圳", "成都", "杭州", "武汉", "南京", "西安", "重庆",
@@ -45,23 +45,26 @@ public class SimulationService {
             "物美集团", "京客隆", "乐购", "卜蜂莲花", "华联综超", "北京华联", "人人乐", "中百仓储"
     };
 
-    private static final String[] PESTICIDES = {
-            "毒死蜱", "氧乐果", "克百威", "甲胺磷", "对硫磷", "甲基对硫磷", "水胺硫磷", "三唑磷",
-            "多菌灵", "百菌清", "甲氰菊酯", "氯氟氰菊酯", "溴氰菊酯", "联苯菊酯", "氟虫腈", "茚虫威"
-    };
-
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    /**
+     * 生成模拟数据
+     *
+     * @param type        数据类型：normal / anomaly
+     * @param count       模拟数量
+     * @param cleanEnabled 是否实时数据清洗（开→调用算法引擎落 risk_assessment / alert_record，关→仅原始数据）
+     * @return 模拟结果
+     */
     @Transactional
-    public SimulationResponse generateData(String type, Integer count) throws JsonProcessingException {
+    public SimulationResponse generateData(String type, Integer count, boolean cleanEnabled) {
         int total = count == null || count <= 0 ? 1 : Math.min(count, 100);
         List<String> batchNos = new ArrayList<>();
-        int alertCount = 0;
 
         for (int i = 0; i < total; i++) {
             String batchNo = generateBatchNo(type, i);
             batchNos.add(batchNo);
 
+            // ① 原始数据落库
             BatchInfo batch = createBatch(batchNo, type);
             batchInfoMapper.insert(batch);
 
@@ -73,26 +76,31 @@ public class SimulationService {
                 logisticsDataMapper.insert(log);
             }
 
-            RiskAssessment risk = createRiskAssessment(batch.getId(), detection, logisticsList, type);
-            riskAssessmentMapper.insert(risk);
-
-            List<AlertRecord> alerts = createAlerts(batch.getId(), detection, logisticsList, type);
-            for (AlertRecord alert : alerts) {
-                alertRecordMapper.insert(alert);
-                alertCount++;
+            // ② 实时清洗（算法引擎处理，可选）
+            if (cleanEnabled) {
+                dataCleanService.cleanBatch(batch.getId());
             }
         }
 
+        // ③ 统计（从已清洗的表中查询）
         Map<String, Long> riskDist = getRiskDistribution();
-        return new SimulationResponse(total, total, alertCount, riskDist, batchNos,
-                type.equals("anomaly") ? "已生成 " + total + " 条异常模拟数据" : "已生成 " + total + " 条正常模拟数据");
+        long alertCount = alertRecordMapper.selectCount(null);
+
+        return new SimulationResponse(
+                total,
+                total,
+                alertCount,
+                riskDist,
+                batchNos,
+                type.equals("anomaly")
+                        ? "已生成 " + total + " 条异常模拟数据，已完成实时清洗"
+                        : "已生成 " + total + " 条正常模拟数据，已完成实时清洗"
+        );
     }
 
     private String generateBatchNo(String type, int index) {
         String dateStr = LocalDate.now().format(DATE_FORMAT);
         String prefix = type.equals("anomaly") ? "AB" : "NB";
-        // 添加随机数混淆，避免 batch_no 唯一约束冲突
-        // 格式：前缀 + 日期 + 4 位序号 + 3 位随机数
         String randomSuffix = String.format("%03d", new Random().nextInt(1000));
         return prefix + dateStr + String.format("%04d", index + 1) + randomSuffix;
     }
@@ -112,7 +120,6 @@ public class SimulationService {
         detection.setTestTime(LocalDateTime.now().minusHours(new Random().nextInt(72)));
 
         if ("anomaly".equals(type)) {
-            // 异常：农残或重金属超标
             int anomalyType = new Random().nextInt(3);
             if (anomalyType == 0) {
                 detection.setPesticide(new BigDecimal(String.format("%.4f", 0.5 + new Random().nextDouble() * 1.5)));
@@ -126,7 +133,6 @@ public class SimulationService {
             }
             detection.setMicrobe(new BigDecimal(String.format("%.4f", new Random().nextDouble() * 800)));
         } else {
-            // 正常：所有指标在安全范围内
             detection.setPesticide(new BigDecimal(String.format("%.4f", new Random().nextDouble() * 0.4)));
             detection.setHeavyMetal(new BigDecimal(String.format("%.4f", new Random().nextDouble() * 0.4)));
             detection.setMicrobe(new BigDecimal(String.format("%.4f", 10 + new Random().nextDouble() * 90)));
@@ -146,12 +152,11 @@ public class SimulationService {
             log.setRecordTime(LocalDateTime.now().minusHours(new Random().nextInt(72)).minusMinutes(i * 60L));
 
             if ("anomaly".equals(type) && new Random().nextInt(10) < 3) {
-                // 异常：温度或湿度超标
                 if (new Random().nextBoolean()) {
                     log.setTemperature(new BigDecimal(String.format("%.1f", 10 + new Random().nextDouble() * 15)));
                     log.setHumidity(new BigDecimal(String.format("%.1f", 40 + new Random().nextDouble() * 40)));
                 } else {
-                    log.setTemperature(new BigDecimal(String.format("%.1f", 2 + new Random().nextDouble() * 5)));
+                    log.setTemperature(new BigDecimal(String.format("%.1f", -3 + new Random().nextDouble() * 3)));
                     log.setHumidity(new BigDecimal(String.format("%.1f", 85 + new Random().nextDouble() * 15)));
                 }
             } else {
@@ -163,106 +168,17 @@ public class SimulationService {
         return list;
     }
 
-    private RiskAssessment createRiskAssessment(Long batchId, DetectionData detection,
-                                                  List<LogisticsData> logisticsList, String type) throws JsonProcessingException {
-        RiskAssessment risk = new RiskAssessment();
-        risk.setBatchId(batchId);
-        risk.setAssessmentDate(LocalDate.now());
-
-        double score;
-        String level;
-
-        if ("anomaly".equals(type)) {
-            score = 60 + new Random().nextDouble() * 40;
-            level = "High";
-        } else {
-            score = 5 + new Random().nextDouble() * 30;
-            level = score <= 40 ? "Low" : "Medium";
-        }
-
-        risk.setRiskScore((int) score);
-        risk.setRiskLevel(level);
-
-        Map<String, Object> factors = new LinkedHashMap<>();
-        factors.put("pesticideScore", Math.min(100, detection.getPesticide().doubleValue() * 150));
-        factors.put("heavyMetalScore", Math.min(100, detection.getHeavyMetal().doubleValue() * 120));
-        factors.put("microbeScore", Math.min(100, detection.getMicrobe().doubleValue() * 0.3));
-        factors.put("tempAnomaly", logisticsList.stream().anyMatch(l ->
-                l.getTemperature().doubleValue() > 8 || l.getTemperature().doubleValue() < 0) ? 1 : 0);
-        factors.put("humidityAnomaly", logisticsList.stream().anyMatch(l ->
-                l.getHumidity().doubleValue() > 85 || l.getHumidity().doubleValue() < 40) ? 1 : 0);
-
-        risk.setFactors(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(factors));
-        return risk;
-    }
-
-    private List<AlertRecord> createAlerts(Long batchId, DetectionData detection,
-                                            List<LogisticsData> logisticsList, String type) {
-        List<AlertRecord> alerts = new ArrayList<>();
-
-        if ("anomaly".equals(type)) {
-            if (detection.getPesticide().doubleValue() > 0.5) {
-                AlertRecord a = new AlertRecord();
-                a.setBatchId(batchId);
-                a.setAlertType("PESTICIDE");
-                a.setRiskScore(BigDecimal.ONE.setScale(2, RoundingMode.HALF_UP));
-                a.setCreateTime(LocalDateTime.now());
-                a.setHandled(0);
-                alerts.add(a);
-            }
-            if (detection.getHeavyMetal().doubleValue() > 0.5) {
-                AlertRecord a = new AlertRecord();
-                a.setBatchId(batchId);
-                a.setAlertType("HEAVY_METAL");
-                a.setRiskScore(new BigDecimal("0.85"));
-                a.setCreateTime(LocalDateTime.now());
-                a.setHandled(0);
-                alerts.add(a);
-            }
-            if (detection.getMicrobe().doubleValue() > 500) {
-                AlertRecord a = new AlertRecord();
-                a.setBatchId(batchId);
-                a.setAlertType("MICROBE");
-                a.setRiskScore(new BigDecimal("0.75"));
-                a.setCreateTime(LocalDateTime.now());
-                a.setHandled(0);
-                alerts.add(a);
-            }
-            boolean tempAnomaly = logisticsList.stream().anyMatch(l ->
-                    l.getTemperature().doubleValue() > 8 || l.getTemperature().doubleValue() < 0);
-            if (tempAnomaly) {
-                AlertRecord a = new AlertRecord();
-                a.setBatchId(batchId);
-                a.setAlertType("TEMP");
-                a.setRiskScore(new BigDecimal("0.60"));
-                a.setCreateTime(LocalDateTime.now());
-                a.setHandled(0);
-                alerts.add(a);
-            }
-            boolean humidityAnomaly = logisticsList.stream().anyMatch(l ->
-                    l.getHumidity().doubleValue() > 85 || l.getHumidity().doubleValue() < 40);
-            if (humidityAnomaly) {
-                AlertRecord a = new AlertRecord();
-                a.setBatchId(batchId);
-                a.setAlertType("HUMIDITY");
-                a.setRiskScore(new BigDecimal("0.55"));
-                a.setCreateTime(LocalDateTime.now());
-                a.setHandled(0);
-                alerts.add(a);
-            }
-        }
-
-        return alerts;
-    }
-
     private Map<String, Long> getRiskDistribution() {
         Map<String, Long> dist = new LinkedHashMap<>();
-        dist.put("Low", riskAssessmentMapper.selectCount(new LambdaQueryWrapper<RiskAssessment>()
-                .eq(RiskAssessment::getRiskLevel, "Low")));
-        dist.put("Medium", riskAssessmentMapper.selectCount(new LambdaQueryWrapper<RiskAssessment>()
-                .eq(RiskAssessment::getRiskLevel, "Medium")));
-        dist.put("High", riskAssessmentMapper.selectCount(new LambdaQueryWrapper<RiskAssessment>()
-                .eq(RiskAssessment::getRiskLevel, "High")));
+        dist.put("Low",    queryRiskCount("Low"));
+        dist.put("Medium", queryRiskCount("Medium"));
+        dist.put("High",   queryRiskCount("High"));
         return dist;
+    }
+
+    private long queryRiskCount(String riskLevel) {
+        return riskAssessmentMapper.selectCount(
+                new LambdaQueryWrapper<RiskAssessment>()
+                        .eq(RiskAssessment::getRiskLevel, riskLevel));
     }
 }

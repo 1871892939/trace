@@ -33,7 +33,8 @@ public class SimulationController {
      */
     @PostMapping("/generate")
     public Map<String, Object> generate(@RequestParam("type") String type,
-                                        @RequestParam(value = "count", defaultValue = "1") Integer count) {
+                                        @RequestParam(value = "count", defaultValue = "1") Integer count,
+                                        @RequestParam(value = "clean", defaultValue = "true") Boolean clean) {
         Map<String, Object> result = new HashMap<>();
 
         try {
@@ -51,7 +52,7 @@ public class SimulationController {
                 return result;
             }
 
-            SimulationResponse response = simulationService.generateData(type, count);
+            SimulationResponse response = simulationService.generateData(type, count, clean);
 
             result.put("code", 200);
             result.put("message", "success");

@@ -5,6 +5,11 @@
         <h2 class="page-title">数据模拟</h2>
         <p class="page-subtitle">生成仿真批次数据，用于系统演示与功能验证</p>
       </div>
+      <div class="clean-toggle">
+        <span class="toggle-label">实时数据清洗</span>
+        <el-switch v-model="cleanEnabled" active-color="#409eff" inactive-color="#dcdfe6" />
+        <span class="toggle-hint">{{ cleanEnabled ? '模拟后自动调用算法处理，落 risk_assessment / alert_record 表' : '仅生成原始数据，不触发算法处理' }}</span>
+      </div>
     </div>
 
     <!-- 操作卡片区 -->
@@ -137,6 +142,7 @@ import { generateData } from '@/api/data'
 
 const lastResult = ref(null)
 const history = ref([])
+const cleanEnabled = ref(true)
 const loading = reactive({
   normal1: false,
   normal20: false,
@@ -149,7 +155,7 @@ async function handleGenerate(type, count) {
   loading[key] = true
 
   try {
-    const res = await generateData(type, count)
+    const res = await generateData(type, count, cleanEnabled.value)
     if (res.code === 200) {
       lastResult.value = res.data
       history.value.unshift({
