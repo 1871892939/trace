@@ -91,7 +91,10 @@ public class SimulationService {
     private String generateBatchNo(String type, int index) {
         String dateStr = LocalDate.now().format(DATE_FORMAT);
         String prefix = type.equals("anomaly") ? "AB" : "NB";
-        return prefix + dateStr + String.format("%04d", index + 1);
+        // 添加随机数混淆，避免 batch_no 唯一约束冲突
+        // 格式：前缀 + 日期 + 4 位序号 + 3 位随机数
+        String randomSuffix = String.format("%03d", new Random().nextInt(1000));
+        return prefix + dateStr + String.format("%04d", index + 1) + randomSuffix;
     }
 
     private BatchInfo createBatch(String batchNo, String type) {

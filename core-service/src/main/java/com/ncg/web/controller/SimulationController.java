@@ -2,11 +2,14 @@ package com.ncg.web.controller;
 
 import com.ncg.dto.SimulationResponse;
 import com.ncg.service.SimulationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 数据模拟控制器
@@ -15,6 +18,8 @@ import java.util.Map;
 @RequestMapping("/api/simulation")
 @CrossOrigin(origins = "*")
 public class SimulationController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(SimulationController.class);
 
     @Autowired
     private SimulationService simulationService;
@@ -49,12 +54,14 @@ public class SimulationController {
             SimulationResponse response = simulationService.generateData(type, count);
 
             result.put("code", 200);
-            result.put("message", response.getMessage());
+            result.put("message", "success");
             result.put("data", response);
 
         } catch (Exception e) {
+            // 记录详细错误日志，但不暴露给前端
+            logger.error("模拟数据生成失败 - type: {}, count: {}, error: {}", type, count, e.getMessage(), e);
             result.put("code", 500);
-            result.put("message", "模拟数据生成失败：" + e.getMessage());
+            result.put("message", "模拟数据生成失败，请稍后重试");
         }
 
         return result;

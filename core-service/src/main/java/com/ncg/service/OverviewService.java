@@ -164,7 +164,7 @@ public class OverviewService {
                         .orderByDesc(BatchInfo::getId)
                         .last("LIMIT 50"));
 
-        List<OverviewDTO.Batch溯源Info> details = new ArrayList<>();
+        List<OverviewDTO.BatchDetail> details = new ArrayList<>();
 
         for (BatchInfo batch : batches) {
             OverviewDTO.BatchDetail info = new OverviewDTO.BatchDetail();
