@@ -7,3 +7,15 @@ export function generateData(type, count, clean = true) {
 export function getOverview() {
   return request.get('/overview/dashboard')
 }
+
+export function queryBatches({ keyword, riskLevel, alertType } = {}) {
+  const params = new URLSearchParams()
+  if (keyword) params.append('keyword', keyword)
+  if (riskLevel) params.append('riskLevel', riskLevel)
+  if (alertType) params.append('alertType', alertType)
+  return request.get(`/trace/batch/query?${params.toString()}`)
+}
+
+export function getTraceChain(batchId) {
+  return request.get(`/trace/chain/${batchId}`)
+}

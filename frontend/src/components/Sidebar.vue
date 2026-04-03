@@ -18,17 +18,12 @@
       active-text-color="#ffffff"
       :router="true"
     >
-      <el-menu-item index="/dashboard">
-        <el-icon><DataBoard /></el-icon>
-        <template #title>首页概览</template>
-      </el-menu-item>
-
-      <el-menu-item index="/overview">
+      <el-menu-item index="/main/overview">
         <el-icon><TrendCharts /></el-icon>
         <template #title>大盘监控</template>
       </el-menu-item>
 
-      <el-menu-item index="/simulation">
+      <el-menu-item index="/main/simulation">
         <el-icon><Cpu /></el-icon>
         <template #title>数据模拟</template>
       </el-menu-item>
@@ -38,8 +33,8 @@
           <el-icon><Guide /></el-icon>
           <span>溯源管理</span>
         </template>
-        <el-menu-item index="/trace/batch">批次查询</el-menu-item>
-        <el-menu-item index="/trace/chain">溯源链</el-menu-item>
+        <el-menu-item index="/main/trace/batch">批次查询</el-menu-item>
+        <el-menu-item index="/main/trace/chain">溯源链</el-menu-item>
       </el-sub-menu>
 
       <el-sub-menu index="alert">
@@ -71,7 +66,6 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import {
-  DataBoard,
   TrendCharts,
   Cpu,
   Guide,
@@ -90,7 +84,10 @@ const activeMenu = computed(() => route.path)
   background: linear-gradient(180deg, #1a3a6b 0%, #0f2347 100%);
   display: flex;
   flex-direction: column;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
   overflow: hidden;
 }
 

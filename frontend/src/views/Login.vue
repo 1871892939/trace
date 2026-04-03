@@ -93,7 +93,7 @@ async function handleLogin() {
   try {
     await userStore.login({ ...form })
     ElMessage.success('登录成功')
-    router.push('/dashboard')
+    router.push('/overview')
   } catch (err) {
     ElMessage.error(err.message || '登录失败，请检查用户名和密码')
   } finally {

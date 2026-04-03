@@ -12,25 +12,54 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/dashboard'
+      redirect: '/overview'
     },
     {
       path: '/dashboard',
-      name: 'Dashboard',
-      component: () => import('@/views/Dashboard.vue'),
-      meta: { requiresAuth: true }
+      redirect: '/overview'
     },
     {
-      path: '/simulation',
-      name: 'Simulation',
-      component: () => import('@/views/Simulation.vue'),
-      meta: { requiresAuth: true }
+      path: '/main',
+      component: () => import('@/views/MainLayout.vue'),
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: 'overview',
+          name: 'Overview',
+          component: () => import('@/views/Overview.vue')
+        },
+        {
+          path: 'simulation',
+          name: 'Simulation',
+          component: () => import('@/views/Simulation.vue')
+        },
+        {
+          path: 'trace/batch',
+          name: 'BatchQuery',
+          component: () => import('@/views/BatchQuery.vue')
+        },
+        {
+          path: 'trace/chain',
+          name: 'TraceChain',
+          component: () => import('@/views/TraceChain.vue')
+        }
+      ]
     },
     {
       path: '/overview',
-      name: 'Overview',
-      component: () => import('@/views/Overview.vue'),
-      meta: { requiresAuth: true }
+      redirect: '/main/overview'
+    },
+    {
+      path: '/simulation',
+      redirect: '/main/simulation'
+    },
+    {
+      path: '/trace/batch',
+      redirect: '/main/trace/batch'
+    },
+    {
+      path: '/trace/chain',
+      redirect: '/main/trace/chain'
     }
   ]
 })
@@ -43,7 +72,7 @@ router.beforeEach((to) => {
   }
 
   if (to.name === 'Login' && userStore.isLoggedIn) {
-    return '/dashboard'
+    return '/main/overview'
   }
 })
 
