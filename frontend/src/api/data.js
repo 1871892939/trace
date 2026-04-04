@@ -19,3 +19,19 @@ export function queryBatches({ keyword, riskLevel, alertType } = {}) {
 export function getTraceChain(batchId) {
   return request.get(`/trace/chain/${batchId}`)
 }
+
+export function queryAlerts({ keyword, alertType, handled } = {}) {
+  const params = new URLSearchParams()
+  if (keyword) params.append('keyword', keyword)
+  if (alertType) params.append('alertType', alertType)
+  if (handled !== undefined && handled !== null) params.append('handled', handled)
+  return request.get(`/alert/list?${params.toString()}`)
+}
+
+export function handleAlert(alertId) {
+  return request.post(`/alert/handle/${alertId}`)
+}
+
+export function getAlertDashboard() {
+  return request.get('/alert/dashboard')
+}

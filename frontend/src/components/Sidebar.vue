@@ -42,8 +42,8 @@
           <el-icon><Bell /></el-icon>
           <span>预警中心</span>
         </template>
-        <el-menu-item index="/alert/list">预警列表</el-menu-item>
-        <el-menu-item index="/alert/handle">预警处理</el-menu-item>
+        <el-menu-item index="/main/alert/list">预警列表</el-menu-item>
+        <el-menu-item index="/main/alert/dashboard">预警大盘</el-menu-item>
       </el-sub-menu>
 
       <el-sub-menu index="system">

@@ -42,6 +42,16 @@ const router = createRouter({
           path: 'trace/chain',
           name: 'TraceChain',
           component: () => import('@/views/TraceChain.vue')
+        },
+        {
+          path: 'alert/list',
+          name: 'AlertList',
+          component: () => import('@/views/AlertList.vue')
+        },
+        {
+          path: 'alert/dashboard',
+          name: 'AlertDashboard',
+          component: () => import('@/views/AlertDashboard.vue')
         }
       ]
     },
@@ -60,6 +70,14 @@ const router = createRouter({
     {
       path: '/trace/chain',
       redirect: '/main/trace/chain'
+    },
+    {
+      path: '/alert/list',
+      redirect: '/main/alert/list'
+    },
+    {
+      path: '/alert/dashboard',
+      redirect: '/main/alert/dashboard'
     }
   ]
 })
