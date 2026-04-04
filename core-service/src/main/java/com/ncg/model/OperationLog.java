@@ -80,6 +80,11 @@ public class OperationLog {
     private String operator;
 
     /**
+     * 批次编号
+     */
+    private String batchNo;
+
+    /**
      * 操作时间
      */
     private LocalDateTime operateTime;

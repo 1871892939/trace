@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <h2 class="page-title">操作日志</h2>
-        <p class="page-subtitle">审计系统增删改操作记录，便于追溯与安全审查</p>
+        <p class="page-subtitle">批次操作审计记录，支持按类型与关键字检索</p>
       </div>
       <el-button :icon="Refresh" @click="fetchData" :loading="loading">
         刷新
@@ -14,7 +14,7 @@
     <div class="filter-bar">
       <el-input
         v-model="filters.keyword"
-        placeholder="搜索用户名 / 描述 / 模块"
+        placeholder="搜索批次号 / 操作描述"
         clearable
         style="width: 220px"
         @keyup.enter="fetchData"
@@ -30,19 +30,6 @@
         <el-option label="删除" value="DELETE" />
       </el-select>
 
-      <el-select v-model="filters.module" placeholder="所属模块" clearable style="width: 140px">
-        <el-option label="批次管理" value="批次管理" />
-        <el-option label="用户管理" value="用户管理" />
-        <el-option label="参数配置" value="参数配置" />
-        <el-option label="预警管理" value="预警管理" />
-        <el-option label="其他" value="其他" />
-      </el-select>
-
-      <el-select v-model="filters.status" placeholder="操作结果" clearable style="width: 120px">
-        <el-option label="成功" value="SUCCESS" />
-        <el-option label="失败" value="FAIL" />
-      </el-select>
-
       <el-button type="primary" :icon="Search" @click="fetchData">查询</el-button>
       <el-button :icon="Refresh" @click="handleReset">重置</el-button>
     </div>
@@ -51,37 +38,32 @@
     <div class="stat-bar">
       <div class="stat-item">
         <span class="stat-num">{{ tableData.length }}</span>
-        <span class="stat-lbl">当前筛选</span>
-      </div>
-      <div class="stat-item success">
-        <span class="stat-num">{{ successCount }}</span>
-        <span class="stat-lbl">条成功</span>
-      </div>
-      <div class="stat-item fail">
-        <span class="stat-num">{{ failCount }}</span>
-        <span class="stat-lbl">条失败</span>
+        <span class="stat-lbl">条记录</span>
       </div>
     </div>
 
     <!-- 日志表格 -->
     <div class="table-card">
       <el-table v-loading="loading" :data="tableData" stripe style="width: 100%">
+        <el-table-column label="批次编号" min-width="170">
+          <template #default="{ row }">
+            <span v-if="row.batchNo" class="batch-no">{{ row.batchNo }}</span>
+            <span v-else class="no-data">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作时间" width="170" align="center">
           <template #default="{ row }">
             <span class="time-text">{{ row.operateTime }}</span>
           </template>
         </el-table-column>
 
-        <el-table-column label="操作用户" min-width="130">
+        <el-table-column label="操作用户" min-width="120">
           <template #default="{ row }">
             <div class="user-cell">
-              <div class="avatar" :class="row.role">{{ (row.username || '?').charAt(0).toUpperCase() }}</div>
-              <div class="user-info">
-                <span class="username-text">{{ row.username || '—' }}</span>
-                <el-tag :type="row.role === 'admin' ? 'danger' : 'primary'" size="small" effect="plain">
-                  {{ row.roleName || row.role }}
-                </el-tag>
+              <div class="avatar" :class="row.role || 'unknown'">
+                {{ (row.username || '?').charAt(0).toUpperCase() }}
               </div>
+              <span class="username-text">{{ row.username || '—' }}</span>
             </div>
           </template>
         </el-table-column>
@@ -94,41 +76,23 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="所属模块" width="110" align="center">
-          <template #default="{ row }">
-            <span class="module-text">{{ row.module }}</span>
-          </template>
-        </el-table-column>
-
         <el-table-column label="操作描述" min-width="200">
           <template #default="{ row }">
             <span class="desc-text">{{ row.description }}</span>
           </template>
         </el-table-column>
 
-        <el-table-column label="请求路径" min-width="160">
+
+
+        <el-table-column label="批次新增时间" width="160" align="center">
           <template #default="{ row }">
-            <code class="url-code">{{ row.requestUrl }}</code>
+            <span class="time-text">{{ row.batchCreateTime || '—' }}</span>
           </template>
         </el-table-column>
 
-        <el-table-column label="IP 地址" width="130" align="center">
+        <el-table-column label="批次修改时间" width="160" align="center">
           <template #default="{ row }">
-            <span class="ip-text">{{ row.ipAddress || '—' }}</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="结果" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 'SUCCESS' ? 'success' : 'danger'" size="small" effect="plain">
-              {{ row.statusName || row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="操作人" width="100" align="center">
-          <template #default="{ row }">
-            <span class="operator-text">{{ row.operator || row.username || '—' }}</span>
+            <span class="time-text">{{ row.batchUpdateTime || '—' }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -141,7 +105,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getOperationLogList } from '@/api/operation-log'
@@ -151,13 +115,8 @@ const tableData = ref([])
 
 const filters = reactive({
   keyword: '',
-  operationType: '',
-  module: '',
-  status: ''
+  operationType: ''
 })
-
-const successCount = computed(() => tableData.value.filter(r => r.status === 'SUCCESS').length)
-const failCount = computed(() => tableData.value.filter(r => r.status === 'FAIL').length)
 
 function opTypeTag(type) {
   const map = { CREATE: 'success', UPDATE: 'warning', DELETE: 'danger' }
@@ -170,8 +129,6 @@ async function fetchData() {
     const params = {}
     if (filters.keyword) params.keyword = filters.keyword
     if (filters.operationType) params.operationType = filters.operationType
-    if (filters.module) params.module = filters.module
-    if (filters.status) params.status = filters.status
     const res = await getOperationLogList(params)
     if (res.code === 200) {
       tableData.value = res.data || []
@@ -186,8 +143,6 @@ async function fetchData() {
 function handleReset() {
   filters.keyword = ''
   filters.operationType = ''
-  filters.module = ''
-  filters.status = ''
   fetchData()
 }
 
@@ -256,9 +211,6 @@ fetchData()
   color: #909399;
 }
 
-.stat-item.success .stat-num { color: #67c23a; }
-.stat-item.fail .stat-num { color: #f56c6c; }
-
 .table-card {
   background: #ffffff;
   border-radius: 12px;
@@ -279,27 +231,22 @@ fetchData()
 }
 
 .avatar {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #ffffff;
   flex-shrink: 0;
 }
 
-.avatar.admin { background: linear-gradient(135deg, #f56c6c, #e64a19); }
+.avatar.admin    { background: linear-gradient(135deg, #f56c6c, #e64a19); }
 .avatar.supervisor { background: linear-gradient(135deg, #409eff, #1a5a96); }
-.avatar.unknown { background: linear-gradient(135deg, #909399, #606266); }
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+.avatar.unknown  { background: linear-gradient(135deg, #909399, #606266); }
+.avatar.system   { background: linear-gradient(135deg, #e6a23c, #8d6600); }
 
 .username-text {
   font-weight: 500;
@@ -307,34 +254,21 @@ fetchData()
   font-size: 13px;
 }
 
-.module-text {
-  font-size: 13px;
-  color: #606266;
-}
-
 .desc-text {
   font-size: 13px;
   color: #303133;
 }
 
-.url-code {
+.batch-no {
   font-family: 'Courier New', monospace;
   font-size: 12px;
-  background: #f5f7fa;
-  padding: 2px 6px;
-  border-radius: 4px;
   color: #409eff;
+  font-weight: 500;
 }
 
-.ip-text {
-  font-size: 12px;
-  color: #909399;
-  font-family: 'Courier New', monospace;
-}
-
-.operator-text {
+.no-data {
+  color: #c0c4cc;
   font-size: 13px;
-  color: #606266;
 }
 
 .empty-tip {

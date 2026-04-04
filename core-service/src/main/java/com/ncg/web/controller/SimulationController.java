@@ -2,14 +2,15 @@ package com.ncg.web.controller;
 
 import com.ncg.dto.SimulationResponse;
 import com.ncg.service.SimulationService;
+import com.ncg.util.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * 数据模拟控制器
@@ -24,6 +25,23 @@ public class SimulationController {
     @Autowired
     private SimulationService simulationService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    private String extractOperator(HttpServletRequest request) {
+        try {
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                String username = jwtUtil.getUsernameFromToken(token);
+                if (username != null && !username.isBlank()) {
+                    return username;
+                }
+            }
+        } catch (Exception ignored) {}
+        return "system";
+    }
+
     /**
      * 生成模拟数据
      *
@@ -34,7 +52,8 @@ public class SimulationController {
     @PostMapping("/generate")
     public Map<String, Object> generate(@RequestParam("type") String type,
                                         @RequestParam(value = "count", defaultValue = "1") Integer count,
-                                        @RequestParam(value = "clean", defaultValue = "true") Boolean clean) {
+                                        @RequestParam(value = "clean", defaultValue = "true") Boolean clean,
+                                        HttpServletRequest request) {
         Map<String, Object> result = new HashMap<>();
 
         try {
@@ -52,7 +71,10 @@ public class SimulationController {
                 return result;
             }
 
-            SimulationResponse response = simulationService.generateData(type, count, clean);
+            String operator = extractOperator(request);
+            String typeLabel = "anomaly".equals(type) ? "异常" : "正常";
+            String description = "数据模拟生成 " + count + " 条" + typeLabel + "批次";
+            SimulationResponse response = simulationService.generateData(type, count, clean, operator, description);
 
             result.put("code", 200);
             result.put("message", "success");

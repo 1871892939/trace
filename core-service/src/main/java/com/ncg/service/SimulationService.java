@@ -35,6 +35,9 @@ public class SimulationService {
     @Autowired
     private DataCleanService dataCleanService;
 
+    @Autowired
+    private OperationLogService operationLogService;
+
     private static final String[] ORIGINS = {
             "北京", "上海", "广州", "深圳", "成都", "杭州", "武汉", "南京", "西安", "重庆",
             "天津", "苏州", "郑州", "长沙", "沈阳", "青岛", "宁波", "东莞", "无锡", "昆明"
@@ -56,7 +59,8 @@ public class SimulationService {
      * @return 模拟结果
      */
     @Transactional
-    public SimulationResponse generateData(String type, Integer count, boolean cleanEnabled) {
+    public SimulationResponse generateData(String type, Integer count, boolean cleanEnabled,
+                                            String operator, String description) {
         int total = count == null || count <= 0 ? 1 : Math.min(count, 100);
         List<String> batchNos = new ArrayList<>();
 
@@ -66,6 +70,8 @@ public class SimulationService {
 
             // ① 原始数据落库
             BatchInfo batch = createBatch(batchNo, type);
+            batch.setOperator(operator);
+            batch.setCreateTime(LocalDateTime.now());
             batchInfoMapper.insert(batch);
 
             DetectionData detection = createDetection(batch.getId(), type);
@@ -80,11 +86,29 @@ public class SimulationService {
             if (cleanEnabled) {
                 dataCleanService.cleanBatch(batch.getId());
             }
+            // ③ 保存数据模拟操作日志
+            OperationLog simLog = new OperationLog();
+            simLog.setUsername(operator != null ? operator : "system");
+            simLog.setRole("");
+            simLog.setOperationType("CREATE");
+            simLog.setModule("批次管理");
+            simLog.setDescription(description != null ? description : ("数据模拟生成 " + total + " 条" + ("anomaly".equals(type) ? "异常" : "正常") + "批次"));
+            simLog.setMethod("POST");
+            simLog.setRequestUrl("/api/simulation/generate");
+            simLog.setRequestParams("{type:" + type + ", count:" + total + ", clean:" + cleanEnabled + "}");
+            simLog.setStatus("SUCCESS");
+            simLog.setIpAddress("internal");
+            simLog.setOperator(operator != null ? operator : "system");
+            simLog.setBatchNo(batchNos.isEmpty() ? null : batchNos.get(i));
+            simLog.setOperateTime(LocalDateTime.now());
+            operationLogService.saveLog(simLog);
         }
 
         // ③ 统计（从已清洗的表中查询）
         Map<String, Long> riskDist = getRiskDistribution();
         long alertCount = alertRecordMapper.selectCount(null);
+
+
 
         return new SimulationResponse(
                 total,

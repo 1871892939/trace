@@ -131,6 +131,7 @@ CREATE TABLE `operation_log` (
   `error_msg` VARCHAR(500) DEFAULT NULL COMMENT '错误信息',
   `ip_address` VARCHAR(50) DEFAULT NULL COMMENT '客户端 IP',
   `operator` VARCHAR(50) DEFAULT NULL COMMENT '操作人（冗余存储）',
+  `batch_no` VARCHAR(50) DEFAULT NULL COMMENT '批次编号',
   `operate_time` DATETIME NOT NULL COMMENT '操作时间',
   PRIMARY KEY (`id`),
   KEY `idx_username` (`username`),

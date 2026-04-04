@@ -39,10 +39,6 @@ public class OperationLogAspect {
             "/api/batch"
     );
 
-    private static final Set<String> WRITE_METHODS = Set.of(
-            "POST", "PUT", "DELETE", "PATCH"
-    );
-
     @Pointcut("execution(* com.ncg.web.controller..*.*(..))")
     public void controllerPointcut() {}
 
@@ -109,8 +105,9 @@ public class OperationLogAspect {
             }
         }
 
-        // 序列化请求参数（脱敏密码）
+        // 序列化请求参数（脱敏密码），同时捕获批次编号
         if (shouldLog) {
+            String capturedBatchNo = null;
             try {
                 Object[] args = point.getArgs();
                 if (args != null && args.length > 0) {
@@ -124,11 +121,18 @@ public class OperationLogAspect {
                             json = json.replaceAll("\"newPassword\"\\s*:\\s*\"[^\"]*\"", "\"newPassword\":\"******\"");
                             json = json.replaceAll("\"oldPassword\"\\s*:\\s*\"[^\"]*\"", "\"oldPassword\":\"******\"");
                             sb.append(json).append(" ");
+                            // 从 JSON 中提取 batchNo 用于日志记录
+                            if (capturedBatchNo == null && url.contains("/batch") && "CREATE".equals(log.getOperationType())) {
+                                capturedBatchNo = extractFieldFromJson(json, "batchNo");
+                            }
                         } catch (Exception ignored) {}
                     }
                     log.setRequestParams(sb.toString().trim());
                 }
             } catch (Exception ignored) {}
+            if (capturedBatchNo != null) {
+                log.setBatchNo(capturedBatchNo);
+            }
         }
 
         Object result = null;
@@ -197,5 +201,15 @@ public class OperationLogAspect {
             ip = ip.split(",")[0].trim();
         }
         return ip;
+    }
+
+    private String extractFieldFromJson(String json, String fieldName) {
+        if (json == null || fieldName == null) return null;
+        String pattern = "\"" + fieldName + "\"\\s*:\\s*\"([^\"]*)\"";
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(pattern).matcher(json);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
     }
 }

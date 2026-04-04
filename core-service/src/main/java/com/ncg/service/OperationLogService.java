@@ -1,8 +1,10 @@
 package com.ncg.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ncg.dal.mapper.BatchInfoMapper;
 import com.ncg.dal.mapper.OperationLogMapper;
 import com.ncg.dto.OperationLogDTO;
+import com.ncg.model.BatchInfo;
 import com.ncg.model.OperationLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,9 @@ public class OperationLogService {
     @Autowired
     private OperationLogMapper operationLogMapper;
 
+    @Autowired
+    private BatchInfoMapper batchInfoMapper;
+
     public void saveLog(OperationLog log) {
         if (log.getOperateTime() == null) {
             log.setOperateTime(LocalDateTime.now());
@@ -29,7 +34,7 @@ public class OperationLogService {
         operationLogMapper.insert(log);
     }
 
-    public List<OperationLogDTO> listLogs(String keyword, String operationType, String module, String status) {
+    public List<OperationLogDTO> listLogs(String keyword, String operationType) {
         LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
         if (keyword != null && !keyword.isBlank()) {
             wrapper.and(w -> w
@@ -37,16 +42,10 @@ public class OperationLogService {
                     .or()
                     .like(OperationLog::getDescription, keyword)
                     .or()
-                    .like(OperationLog::getModule, keyword));
+                    .like(OperationLog::getBatchNo, keyword));
         }
         if (operationType != null && !operationType.isBlank()) {
             wrapper.eq(OperationLog::getOperationType, operationType);
-        }
-        if (module != null && !module.isBlank()) {
-            wrapper.eq(OperationLog::getModule, module);
-        }
-        if (status != null && !status.isBlank()) {
-            wrapper.eq(OperationLog::getStatus, status);
         }
         wrapper.orderByDesc(OperationLog::getOperateTime);
         wrapper.last("LIMIT 500");
@@ -79,6 +78,20 @@ public class OperationLogService {
         dto.setErrorMsg(log.getErrorMsg());
         dto.setIpAddress(log.getIpAddress());
         dto.setOperator(log.getOperator());
+        dto.setBatchNo(log.getBatchNo());
+        dto.setBatchCreateTime("");
+        dto.setBatchUpdateTime("");
+        // 通过 batchNo 查询批次信息以获取批次创建/修改时间
+        if (log.getBatchNo() != null && !log.getBatchNo().isBlank()) {
+            BatchInfo batch = batchInfoMapper.selectOne(
+                    new LambdaQueryWrapper<BatchInfo>()
+                            .eq(BatchInfo::getBatchNo, log.getBatchNo())
+                            .last("LIMIT 1"));
+            if (batch != null) {
+                dto.setBatchCreateTime(batch.getCreateTime() != null ? batch.getCreateTime().format(DT_FORMAT) : "");
+                dto.setBatchUpdateTime(batch.getUpdateTime() != null ? batch.getUpdateTime().format(DT_FORMAT) : "");
+            }
+        }
         dto.setOperateTime(log.getOperateTime() != null ? log.getOperateTime().format(DT_FORMAT) : "");
         return dto;
     }

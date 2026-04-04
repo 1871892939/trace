@@ -23,12 +23,10 @@ public class OperationLogController {
     @GetMapping("/list")
     public Map<String, Object> getLogList(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String operationType,
-            @RequestParam(required = false) String module,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String operationType) {
         Map<String, Object> result = new HashMap<>();
         try {
-            List<OperationLogDTO> list = operationLogService.listLogs(keyword, operationType, module, status);
+            List<OperationLogDTO> list = operationLogService.listLogs(keyword, operationType);
             result.put("code", 200);
             result.put("message", "success");
             result.put("data", list);

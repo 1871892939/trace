@@ -38,5 +38,20 @@ public class OperationLogDTO {
 
     private String operator;
 
+    /**
+     * 批次编号
+     */
+    private String batchNo;
+
+    /**
+     * 批次新增时间
+     */
+    private String batchCreateTime;
+
+    /**
+     * 批次修改时间
+     */
+    private String batchUpdateTime;
+
     private String operateTime;
 }
