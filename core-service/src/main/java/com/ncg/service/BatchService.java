@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ncg.dal.mapper.*;
 import com.ncg.dto.BatchCreateRequest;
 import com.ncg.dto.BatchUpdateRequest;
+import com.ncg.dto.OverviewDTO;
 import com.ncg.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,12 @@ public class BatchService {
     @Autowired
     private RiskAssessmentMapper riskAssessmentMapper;
 
+    @Autowired
+    private DataChangeNotifier dataChangeNotifier;
+
+    @Autowired
+    private OverviewService overviewService;
+
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Transactional(rollbackFor = Exception.class)
@@ -49,6 +56,7 @@ public class BatchService {
             batch.setProductionDate(LocalDate.parse(req.getProductionDate()));
         }
         batch.setOperator(operator);
+        batch.setCleaned(0);
         batch.setCreateTime(LocalDateTime.now());
         batchInfoMapper.insert(batch);
 
@@ -120,6 +128,12 @@ public class BatchService {
                 logisticsDataMapper.insert(logistics);
             }
         }
+
+        // ④ 推送最新大盘数据
+        try {
+            OverviewDTO overview = overviewService.getOverview();
+            dataChangeNotifier.pushOverviewUpdate(overview);
+        } catch (Exception ignored) {}
     }
 
     public void updateBatch(BatchUpdateRequest req, String operator) {

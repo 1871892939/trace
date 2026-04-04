@@ -25,10 +25,12 @@ CREATE TABLE `batch_info` (
   `enterprise` VARCHAR(100) NOT NULL COMMENT '所属企业',
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
   `operator` VARCHAR(50) DEFAULT NULL COMMENT '操作人',
+  `cleaned` TINYINT DEFAULT 0 COMMENT '是否已清洗：0-未清洗 1-已清洗',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_batch_no` (`batch_no`),
-  KEY `idx_production_date` (`production_date`)
+  KEY `idx_production_date` (`production_date`),
+  KEY `idx_cleaned` (`cleaned`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='食品批次信息表';
 
 -- ==================== 3. 检测数据表 ====================
@@ -52,8 +54,8 @@ DROP TABLE IF EXISTS `logistics_data`;
 CREATE TABLE `logistics_data` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
   `batch_id` BIGINT NOT NULL COMMENT '批次 ID',
-  `gps_lng` DECIMAL(10,8) NOT NULL COMMENT 'GPS 经度',
-  `gps_lat` DECIMAL(10,8) NOT NULL COMMENT 'GPS 纬度',
+  `gps_lng` DECIMAL(20,8) NOT NULL COMMENT 'GPS 经度',
+  `gps_lat` DECIMAL(20,8) NOT NULL COMMENT 'GPS 纬度',
   `temperature` DECIMAL(5,2) NOT NULL COMMENT '车厢温度 (℃)',
   `humidity` DECIMAL(5,2) NOT NULL COMMENT '车厢湿度 (%)',
   `record_time` DATETIME NOT NULL COMMENT '采集时间戳',
@@ -167,15 +169,20 @@ INSERT INTO `config_param` (`param_key`, `param_name`, `param_value`, `param_typ
 ('alert.score.serious', '严重告警分数', '0.5', 'number', 'alert', '风险分数≥此值判定为严重告警（0-1）', 1),
 ('alert.composite.threshold', '综合预警触发分数', '70', 'number', 'alert', '风险评分高于此值且无具体类型预警时，触发综合预警', 1);
 
+-- ==================== 定时清洗配置参数 ====================
+INSERT INTO `config_param` (`param_key`, `param_name`, `param_value`, `param_type`, `param_group`, `description`, `editable`) VALUES
+('schedule.enabled', '定时清洗开关', 'false', 'boolean', 'schedule', '是否启用定时清洗任务（true=启用，false=禁用）', 1),
+('schedule.interval', '清洗间隔（秒）', '10', 'number', 'schedule', '定时清洗任务的执行间隔，单位秒，默认10秒', 1);
+
 -- ==================== 初始化测试数据 ====================
 
 -- 插入测试用户（密码都是 123456，BCrypt 加密）
 INSERT INTO `user_info` (`username`, `password`, `role`, `status`) VALUES
-('admin', '$2a$10$rOZ7HkzS9FqvxXmWqJCuL.8yNvVqC5bKZZ9mYxF7H8KqN2pL4mR5u', 'admin', 1),
-('supervisor01', '$2a$10$rOZ7HkzS9FqvxXmWqJCuL.8yNvVqC5bKZZ9mYxF7H8KqN2pL4mR5u', 'supervisor', 1);
+('admin', '$2a$10$sXM6lMxCgaYN4fg/klaZf.Ojgub2o14nUPPYYU1IVmeOVNUt/SaV2', 'admin', 1),
+('supervisor01', '$2a$10$sXM6lMxCgaYN4fg/klaZf.Ojgub2o14nUPPYYU1IVmeOVNUt/SaV2', 'supervisor', 1);
 
 -- 插入测试批次（示例）
-INSERT INTO `batch_info` (`batch_no`, `origin`, `production_date`, `enterprise`) VALUES
-('BATCH20260324001', '440000', '2026-03-20', '广州食品加工厂'),
-('BATCH20260324002', '330000', '2026-03-21', '杭州农业合作社'),
-('BATCH20260324003', '110000', '2026-03-22', '北京乳业集团');
+INSERT INTO `batch_info` (`batch_no`, `origin`, `production_date`, `enterprise`, `cleaned`) VALUES
+('BATCH20260324001', '440000', '2026-03-20', '广州食品加工厂', 1),
+('BATCH20260324002', '330000', '2026-03-21', '杭州农业合作社', 1),
+('BATCH20260324003', '110000', '2026-03-22', '北京乳业集团', 1);

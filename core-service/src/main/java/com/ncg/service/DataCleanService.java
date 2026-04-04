@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -117,6 +116,13 @@ public class DataCleanService {
         for (AlertRecord alert : alerts) {
             alertRecordMapper.insert(alert);
         }
+
+        // ⑥ 标记批次为已清洗
+        BatchInfo batch = batchInfoMapper.selectById(batchId);
+        if (batch != null) {
+            batch.setCleaned(1);
+            batchInfoMapper.updateById(batch);
+        }
     }
 
     /**
@@ -220,13 +226,19 @@ public class DataCleanService {
      */
     @Transactional
     public int cleanAllUnprocessed() {
-        List<BatchInfo> batches = batchInfoMapper.selectList(null);
+        // 只查未清洗且有检测数据的批次
+        List<BatchInfo> batches = batchInfoMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BatchInfo>()
+                        .eq(BatchInfo::getCleaned, 0));
         int count = 0;
         for (BatchInfo batch : batches) {
+            // 再次确认未清洗（防止并发）
             long alreadyExists = riskAssessmentMapper.selectCount(
                     new LambdaQueryWrapper<RiskAssessment>()
                             .eq(RiskAssessment::getBatchId, batch.getId()));
             if (alreadyExists > 0) {
+                batch.setCleaned(1);
+                batchInfoMapper.updateById(batch);
                 continue;
             }
             try {

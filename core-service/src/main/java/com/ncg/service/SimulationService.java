@@ -2,6 +2,7 @@ package com.ncg.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ncg.dal.mapper.*;
+import com.ncg.dto.OverviewDTO;
 import com.ncg.dto.SimulationResponse;
 import com.ncg.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,12 @@ public class SimulationService {
     @Autowired
     private OperationLogService operationLogService;
 
+    @Autowired
+    private OverviewService overviewService;
+
+    @Autowired
+    private DataChangeNotifier dataChangeNotifier;
+
     private static final String[] ORIGINS = {
             "北京", "上海", "广州", "深圳", "成都", "杭州", "武汉", "南京", "西安", "重庆",
             "天津", "苏州", "郑州", "长沙", "沈阳", "青岛", "宁波", "东莞", "无锡", "昆明"
@@ -71,6 +78,7 @@ public class SimulationService {
             // ① 原始数据落库
             BatchInfo batch = createBatch(batchNo, type);
             batch.setOperator(operator);
+            batch.setCleaned(0);
             batch.setCreateTime(LocalDateTime.now());
             batchInfoMapper.insert(batch);
 
@@ -104,11 +112,17 @@ public class SimulationService {
             operationLogService.saveLog(simLog);
         }
 
-        // ③ 统计（从已清洗的表中查询）
+        // ④ 统计（从已清洗的表中查询）
         Map<String, Long> riskDist = getRiskDistribution();
         long alertCount = alertRecordMapper.selectCount(null);
 
-
+        // ⑤ 推送最新大盘数据
+        try {
+            OverviewDTO overview = overviewService.getOverview();
+            dataChangeNotifier.pushOverviewUpdate(overview);
+        } catch (Exception e) {
+            // 推送失败不影响主业务
+        }
 
         return new SimulationResponse(
                 total,

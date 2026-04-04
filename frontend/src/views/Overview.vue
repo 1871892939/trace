@@ -181,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import VChart, { THEME_KEY } from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -195,6 +195,7 @@ import {
 } from 'echarts/components'
 import { ElMessage } from 'element-plus'
 import { getOverview } from '@/api/data'
+import { wsService } from '@/api/ws'
 
 use([CanvasRenderer, PieChart, BarChart, LineChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent])
 
@@ -219,6 +220,15 @@ async function fetchData() {
 
 onMounted(() => {
   fetchData()
+  wsService.connect()
+  wsService.on('OVERVIEW_UPDATE', (data) => {
+    overviewData.value = data
+  })
+})
+
+onUnmounted(() => {
+  wsService.off('OVERVIEW_UPDATE')
+  wsService.disconnect()
 })
 
 function alertTypeLabel(type) {

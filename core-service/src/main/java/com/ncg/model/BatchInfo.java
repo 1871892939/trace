@@ -49,6 +49,11 @@ public class BatchInfo {
     private String operator;
 
     /**
+     * 是否已清洗：0-未清洗 1-已清洗
+     */
+    private Integer cleaned;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;
