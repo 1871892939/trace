@@ -28,13 +28,19 @@
         <template #title>数据模拟</template>
       </el-menu-item>
 
-      <el-sub-menu index="trace">
+      <el-menu-item index="/main/trace/chain">
+        <el-icon><Guide /></el-icon>
+        <template #title>溯源链</template>
+      </el-menu-item>
+
+      <el-sub-menu index="batch">
         <template #title>
-          <el-icon><Guide /></el-icon>
-          <span>溯源管理</span>
+          <el-icon><Box /></el-icon>
+          <span>批次管理</span>
         </template>
-        <el-menu-item index="/main/trace/batch">批次查询</el-menu-item>
-        <el-menu-item index="/main/trace/chain">溯源链</el-menu-item>
+        <el-menu-item index="/main/batch/query">批次查询</el-menu-item>
+        <el-menu-item index="/main/batch/entry">批次录入</el-menu-item>
+        <el-menu-item index="/main/batch/operation-log">操作日志</el-menu-item>
       </el-sub-menu>
 
       <el-sub-menu index="alert">
@@ -70,7 +76,8 @@ import {
   Cpu,
   Guide,
   Bell,
-  Setting
+  Setting,
+  Box
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

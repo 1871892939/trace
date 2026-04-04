@@ -5,6 +5,7 @@
         <h2 class="page-title">批次查询</h2>
         <p class="page-subtitle">多条件检索溯源批次，查看风险与预警状态</p>
       </div>
+      <el-button type="primary" :icon="Plus" @click="goToEntry">新增批次</el-button>
     </div>
 
     <!-- 筛选栏 -->
@@ -47,7 +48,6 @@
         :data="tableData"
         stripe
         style="width: 100%"
-        @row-click="handleViewChain"
       >
         <el-table-column prop="batchNo" label="批次号" min-width="160" />
         <el-table-column prop="origin" label="产地" min-width="120" />
@@ -90,10 +90,28 @@
             <span v-else class="no-data">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="修改时间" width="160" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click.stop="goToChain(row)">
-              查看溯源链
+            <span class="time-text">{{ row.updateTime || row.createTime || '—' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作人" width="100" align="center">
+          <template #default="{ row }">
+            <span class="operator-text">{{ row.operator || '—' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="goToChain(row)">
+              溯源链
+            </el-button>
+            <el-divider direction="vertical" />
+            <el-button type="warning" link size="small" @click="openEditDialog(row)">
+              编辑
+            </el-button>
+            <el-divider direction="vertical" />
+            <el-button type="danger" link size="small" @click="handleDelete(row)">
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -103,6 +121,40 @@
         <el-empty description="未找到符合条件的批次记录" />
       </div>
     </div>
+
+    <!-- 编辑弹窗 -->
+    <el-dialog
+      v-model="editDialogVisible"
+      title="编辑批次"
+      width="480px"
+      :close-on-click-modal="false"
+    >
+      <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-width="100px">
+        <el-form-item label="批次编号">
+          <el-input :value="editForm.batchNo" disabled />
+        </el-form-item>
+        <el-form-item label="产地编码" prop="origin">
+          <el-input v-model="editForm.origin" placeholder="如 440000" clearable />
+        </el-form-item>
+        <el-form-item label="所属企业" prop="enterprise">
+          <el-input v-model="editForm.enterprise" placeholder="请输入企业名称" clearable />
+        </el-form-item>
+        <el-form-item label="生产日期" prop="productionDate">
+          <el-date-picker
+            v-model="editForm.productionDate"
+            type="date"
+            placeholder="选择生产日期"
+            style="width: 100%"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSaveEdit" :loading="saving">确认保存</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 溯源链抽屉 -->
     <el-drawer
@@ -120,22 +172,39 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Refresh } from '@element-plus/icons-vue'
-import { queryBatches } from '@/api/data'
+import { Search, Refresh, Plus } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { queryBatches, updateBatch, deleteBatch } from '@/api/data'
 import TraceChainDetail from '@/components/TraceChainDetail.vue'
 
 const router = useRouter()
 
 const loading = ref(false)
+const saving = ref(false)
 const tableData = ref([])
 const chainDrawerVisible = ref(false)
 const selectedBatchId = ref(null)
+const editDialogVisible = ref(false)
+const editFormRef = ref(null)
+const editForm = reactive({
+  id: null,
+  batchNo: '',
+  origin: '',
+  enterprise: '',
+  productionDate: ''
+})
 
 const filters = reactive({
   keyword: '',
   riskLevel: '',
   alertType: ''
 })
+
+const editRules = {
+  origin: [{ required: true, message: '请输入产地编码', trigger: 'blur' }],
+  enterprise: [{ required: true, message: '请输入企业名称', trigger: 'blur' }],
+  productionDate: [{ required: true, message: '请选择生产日期', trigger: 'change' }]
+}
 
 const alertTypeMap = {
   TEMP: '温度异常',
@@ -182,13 +251,68 @@ function handleReset() {
   fetchData()
 }
 
-function handleViewChain(row) {
-  selectedBatchId.value = row.id
-  chainDrawerVisible.value = true
-}
-
 function goToChain(row) {
   router.push({ path: '/main/trace/chain', query: { batchId: row.id } })
+}
+
+function goToEntry() {
+  router.push('/main/batch/entry')
+}
+
+function openEditDialog(row) {
+  editForm.id = row.id
+  editForm.batchNo = row.batchNo
+  editForm.origin = row.origin
+  editForm.enterprise = row.enterprise
+  editForm.productionDate = row.productionDate
+  editDialogVisible.value = true
+  editFormRef.value?.clearValidate()
+}
+
+async function handleSaveEdit() {
+  const valid = await editFormRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  saving.value = true
+  try {
+    const res = await updateBatch({
+      id: editForm.id,
+      origin: editForm.origin.trim(),
+      enterprise: editForm.enterprise.trim(),
+      productionDate: editForm.productionDate
+    })
+    if (res.code === 200) {
+      ElMessage.success('修改成功')
+      editDialogVisible.value = false
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '修改失败')
+    }
+  } catch {
+    ElMessage.error('修改失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(
+      `删除批次「${row.batchNo}」将同时清除该批次已处理的预警和风险评估记录，确认删除？`,
+      '删除批次',
+      { confirmButtonText: '确认删除', cancelButtonText: '取消', type: 'error' }
+    )
+  } catch {
+    return
+  }
+
+  const res = await deleteBatch(row.id)
+  if (res.code === 200) {
+    ElMessage.success('删除成功')
+    fetchData()
+  } else {
+    ElMessage.error(res.message || '删除失败')
+  }
 }
 
 fetchData()
@@ -249,6 +373,12 @@ fetchData()
 
 .no-data {
   color: #c0c4cc;
+}
+
+.time-text,
+.operator-text {
+  font-size: 12px;
+  color: #909399;
 }
 
 .empty-tip {

@@ -22,5 +22,7 @@ public class BatchQueryDTO {
     private Boolean hasAlert;
     private String alertType;
     private Boolean handled;
+    private String updateTime;
+    private String operator;
     private String createTime;
 }

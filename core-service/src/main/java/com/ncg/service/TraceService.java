@@ -85,6 +85,8 @@ public class TraceService {
                 dto.setHandled(null);
             }
 
+            dto.setUpdateTime(batch.getUpdateTime() != null ? batch.getUpdateTime().format(DT_FORMAT) : "");
+            dto.setOperator(batch.getOperator());
             dto.setCreateTime(batch.getProductionDate() != null ? batch.getProductionDate().toString() : "");
 
             return dto;

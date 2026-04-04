@@ -34,14 +34,24 @@ const router = createRouter({
           component: () => import('@/views/Simulation.vue')
         },
         {
-          path: 'trace/batch',
+          path: 'trace/chain',
+          name: 'TraceChain',
+          component: () => import('@/views/TraceChain.vue')
+        },
+        {
+          path: 'batch/query',
           name: 'BatchQuery',
           component: () => import('@/views/BatchQuery.vue')
         },
         {
-          path: 'trace/chain',
-          name: 'TraceChain',
-          component: () => import('@/views/TraceChain.vue')
+          path: 'batch/entry',
+          name: 'BatchEntry',
+          component: () => import('@/views/BatchEntry.vue')
+        },
+        {
+          path: 'batch/operation-log',
+          name: 'OperationLog',
+          component: () => import('@/views/OperationLog.vue')
         },
         {
           path: 'alert/list',
@@ -57,12 +67,17 @@ const router = createRouter({
           path: 'config',
           name: 'Config',
           component: () => import('@/views/Config.vue')
+        },
+        {
+          path: 'user',
+          name: 'UserManagement',
+          component: () => import('@/views/UserManagement.vue')
         }
       ]
     },
     {
-      path: '/config',
-      redirect: '/main/config'
+      path: '/user',
+      redirect: '/main/user'
     },
     {
       path: '/overview',
@@ -73,12 +88,20 @@ const router = createRouter({
       redirect: '/main/simulation'
     },
     {
-      path: '/trace/batch',
-      redirect: '/main/trace/batch'
-    },
-    {
       path: '/trace/chain',
       redirect: '/main/trace/chain'
+    },
+    {
+      path: '/batch/query',
+      redirect: '/main/batch/query'
+    },
+    {
+      path: '/batch/entry',
+      redirect: '/main/batch/entry'
+    },
+    {
+      path: '/batch/operation-log',
+      redirect: '/main/batch/operation-log'
     },
     {
       path: '/alert/list',

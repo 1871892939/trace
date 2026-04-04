@@ -14,32 +14,42 @@ import java.time.LocalDateTime;
 @Data
 @TableName("detection_data")
 public class DetectionData {
-    
+
     @TableId(type = IdType.AUTO)
     private Long id;
-    
+
     /**
      * 批次 ID
      */
     private Long batchId;
-    
+
     /**
      * 农残值
      */
     private BigDecimal pesticide;
-    
+
     /**
      * 重金属值
      */
     private BigDecimal heavyMetal;
-    
+
     /**
      * 微生物值
      */
     private BigDecimal microbe;
-    
+
     /**
      * 检测时间
      */
     private LocalDateTime testTime;
+
+    /**
+     * 操作人
+     */
+    private String operator;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createTime;
 }

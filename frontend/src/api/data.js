@@ -16,6 +16,24 @@ export function queryBatches({ keyword, riskLevel, alertType } = {}) {
   return request.get(`/trace/batch/query?${params.toString()}`)
 }
 
+export function createBatch(data) {
+  return request.post('/batch/create', data)
+}
+
+export function updateBatch(data) {
+  return request.put('/batch/update', data)
+}
+
+export function deleteBatch(batchId) {
+  return request.delete(`/batch/${batchId}`)
+}
+
+export function checkBatchNoExists(batchNo, excludeId = null) {
+  const params = new URLSearchParams({ batchNo })
+  if (excludeId != null) params.append('excludeId', excludeId)
+  return request.get(`/batch/check-batch-no?${params.toString()}`)
+}
+
 export function getTraceChain(batchId) {
   return request.get(`/trace/chain/${batchId}`)
 }

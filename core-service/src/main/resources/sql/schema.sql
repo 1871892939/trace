@@ -23,6 +23,8 @@ CREATE TABLE `batch_info` (
   `origin` VARCHAR(20) NOT NULL COMMENT '产地编码 (省份代码)',
   `production_date` DATE NOT NULL COMMENT '生产日期',
   `enterprise` VARCHAR(100) NOT NULL COMMENT '所属企业',
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+  `operator` VARCHAR(50) DEFAULT NULL COMMENT '操作人',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_batch_no` (`batch_no`),
@@ -38,6 +40,7 @@ CREATE TABLE `detection_data` (
   `heavy_metal` DECIMAL(10,4) NOT NULL COMMENT '重金属值 (mg/kg)',
   `microbe` DECIMAL(10,2) NOT NULL COMMENT '微生物值 (CFU/g)',
   `test_time` DATETIME NOT NULL COMMENT '检测时间',
+  `operator` VARCHAR(50) DEFAULT NULL COMMENT '操作人',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `idx_batch_id` (`batch_id`),
@@ -54,6 +57,7 @@ CREATE TABLE `logistics_data` (
   `temperature` DECIMAL(5,2) NOT NULL COMMENT '车厢温度 (℃)',
   `humidity` DECIMAL(5,2) NOT NULL COMMENT '车厢湿度 (%)',
   `record_time` DATETIME NOT NULL COMMENT '采集时间戳',
+  `operator` VARCHAR(50) DEFAULT NULL COMMENT '操作人',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `idx_batch_id` (`batch_id`),
@@ -69,6 +73,7 @@ CREATE TABLE `alert_record` (
   `risk_score` DECIMAL(5,2) NOT NULL COMMENT '风险分数 (0-100)',
   `create_time` DATETIME NOT NULL COMMENT '创建时间',
   `handled` TINYINT DEFAULT 0 COMMENT '是否已处理：0-未处理 1-已处理',
+  `operator` VARCHAR(50) DEFAULT NULL COMMENT '操作人',
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_batch_id` (`batch_id`),
@@ -85,7 +90,9 @@ CREATE TABLE `risk_assessment` (
   `risk_score` INT NOT NULL COMMENT '风险评分 (0-100)',
   `assessment_date` DATE NOT NULL COMMENT '评估日期',
   `factors` TEXT COMMENT '风险因素 (JSON 字符串，包含各项得分明细)',
+  `operator` VARCHAR(50) DEFAULT NULL COMMENT '操作人',
   `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `idx_batch_id` (`batch_id`),
   KEY `idx_assessment_date` (`assessment_date`)
@@ -107,6 +114,30 @@ CREATE TABLE `config_param` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_param_key` (`param_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置参数表';
+
+-- ==================== 8. 操作日志审计表 ====================
+DROP TABLE IF EXISTS `operation_log`;
+CREATE TABLE `operation_log` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+  `username` VARCHAR(50) NOT NULL COMMENT '操作用户',
+  `role` VARCHAR(20) DEFAULT NULL COMMENT '用户角色',
+  `operation_type` VARCHAR(20) NOT NULL COMMENT '操作类型：CREATE/UPDATE/DELETE',
+  `module` VARCHAR(50) NOT NULL COMMENT '所属模块',
+  `description` VARCHAR(500) DEFAULT NULL COMMENT '操作描述',
+  `method` VARCHAR(10) DEFAULT NULL COMMENT 'HTTP 方法',
+  `request_url` VARCHAR(255) DEFAULT NULL COMMENT '请求路径',
+  `request_params` TEXT COMMENT '请求参数 (脱敏)',
+  `status` VARCHAR(20) NOT NULL COMMENT '操作结果：SUCCESS/FAIL',
+  `error_msg` VARCHAR(500) DEFAULT NULL COMMENT '错误信息',
+  `ip_address` VARCHAR(50) DEFAULT NULL COMMENT '客户端 IP',
+  `operator` VARCHAR(50) DEFAULT NULL COMMENT '操作人（冗余存储）',
+  `operate_time` DATETIME NOT NULL COMMENT '操作时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_username` (`username`),
+  KEY `idx_module` (`module`),
+  KEY `idx_operation_type` (`operation_type`),
+  KEY `idx_operate_time` (`operate_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志审计表';
 
 -- ==================== 初始化系统默认参数 ====================
 INSERT INTO `config_param` (`param_key`, `param_name`, `param_value`, `param_type`, `param_group`, `description`, `editable`) VALUES

@@ -2,6 +2,7 @@ package com.ncg.web.controller;
 
 import com.ncg.dto.LoginRequest;
 import com.ncg.dto.LoginResponse;
+import com.ncg.dto.RegisterRequest;
 import com.ncg.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -105,6 +106,23 @@ public class AuthController {
             result.put("message", "刷新 Token 失败：" + e.getMessage());
         }
         
+        return result;
+    }
+
+    /**
+     * 用户注册
+     */
+    @PostMapping("/register")
+    public Map<String, Object> register(@RequestBody RegisterRequest request) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            authService.register(request);
+            result.put("code", 200);
+            result.put("message", "注册成功");
+        } catch (Exception e) {
+            result.put("code", 400);
+            result.put("message", e.getMessage());
+        }
         return result;
     }
 }
