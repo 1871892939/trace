@@ -1,5 +1,7 @@
 package com.ncg.algorithm;
 
+import com.ncg.service.ConfigService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -11,69 +13,106 @@ import java.math.RoundingMode;
  * 设计思路：摒弃复杂机器学习，采用监管规则驱动的加权评分机制
  * 评分范围：0-100 分
  * 风险等级：Low(0-40) / Medium(41-70) / High(71-100)
+ *
+ * 所有阈值和权重均从 ConfigService 动态读取，不再硬编码。
  */
 @Component
 public class RiskScoring {
 
-    // ==================== 权重配置（检测 70% + 物流 30%）====================
+    @Autowired
+    private ConfigService configService;
 
-    private static final double WEIGHT_PESTICIDE = 35.0;
-    private static final double WEIGHT_HEAVY_METAL = 35.0;
-    private static final double WEIGHT_MICROBE = 30.0;
+    // ==================== 检测指标权重（默认静态值，ConfigService 未就绪时兜底）====================
 
-    private static final double WEIGHT_TEMP = 60.0;
-    private static final double WEIGHT_HUMIDITY = 40.0;
+    private double getWeightPesticide() {
+        return parseDouble(configService.getValue("risk.weight.pesticide"), 35.0);
+    }
 
-    // ==================== 国标阈值 ====================
+    private double getWeightHeavyMetal() {
+        return parseDouble(configService.getValue("risk.weight.heavy_metal"), 35.0);
+    }
 
-    /** 农残限量阈值（mg/kg）- GB 2763 */
-    private static final BigDecimal PESTICIDE_LIMIT = new BigDecimal("0.5");
+    private double getWeightMicrobe() {
+        return parseDouble(configService.getValue("risk.weight.microbe"), 30.0);
+    }
 
-    /** 重金属限量阈值（mg/kg）- GB 2762 */
-    private static final BigDecimal HEAVY_METAL_LIMIT = new BigDecimal("0.1");
+    private double getWeightTemp() {
+        return parseDouble(configService.getValue("risk.weight.temp"), 60.0);
+    }
 
-    /** 微生物限量阈值（CFU/g）- GB 29921 */
-    private static final BigDecimal MICROBE_LIMIT = new BigDecimal("200");
+    private double getWeightHumidity() {
+        return parseDouble(configService.getValue("risk.weight.humidity"), 40.0);
+    }
 
-    /** 冷链适宜温度（℃） */
-    private static final BigDecimal TEMP_MIN = new BigDecimal("0");
-    private static final BigDecimal TEMP_MAX = new BigDecimal("10");
+    // ==================== 国标限量阈值（从配置读取）====================
 
-    /** 适宜湿度（%） */
-    private static final BigDecimal HUMIDITY_MIN = new BigDecimal("40");
-    private static final BigDecimal HUMIDITY_MAX = new BigDecimal("70");
+    private BigDecimal getPesticideLimit() {
+        return parseNumeric(configService.getValue("limit.pesticide"), new BigDecimal("0.5"));
+    }
 
-    // ==================== 风险等级阈值 ====================
+    private BigDecimal getHeavyMetalLimit() {
+        return parseNumeric(configService.getValue("limit.heavy_metal"), new BigDecimal("0.1"));
+    }
 
-    private static final int RISK_LOW_THRESHOLD = 40;
-    private static final int RISK_HIGH_THRESHOLD = 70;
+    private BigDecimal getMicrobeLimit() {
+        return parseNumeric(configService.getValue("limit.microbe"), new BigDecimal("200"));
+    }
+
+    private BigDecimal getTempMin() {
+        return parseNumeric(configService.getValue("limit.temp.min"), BigDecimal.ZERO);
+    }
+
+    private BigDecimal getTempMax() {
+        return parseNumeric(configService.getValue("limit.temp.max"), new BigDecimal("10"));
+    }
+
+    private BigDecimal getHumidityMin() {
+        return parseNumeric(configService.getValue("limit.humidity.min"), new BigDecimal("40"));
+    }
+
+    private BigDecimal getHumidityMax() {
+        return parseNumeric(configService.getValue("limit.humidity.max"), new BigDecimal("70"));
+    }
+
+    // ==================== 风险等级阈值（从配置读取）====================
+
+    private int getRiskLowThreshold() {
+        return parseInt(configService.getValue("risk.low.threshold"), 40);
+    }
+
+    private int getRiskHighThreshold() {
+        return parseInt(configService.getValue("risk.high.threshold"), 70);
+    }
 
     /**
      * 计算综合风险评分
      *
      * @param pesticide  农残值
      * @param heavyMetal 重金属值
-     * @param microbe     微生物值
-     * @param tempMax     物流温度（取该批次中偏离最大的那条记录）
-     * @param humMax      物流湿度（取该批次中偏离最大的那条记录）
+     * @param microbe    微生物值
+     * @param tempMax    物流温度（取该批次中偏离最大的那条记录）
+     * @param humMax     物流湿度（取该批次中偏离最大的那条记录）
      * @return 综合风险分 (0-100)
      */
     public int calculateRiskScore(BigDecimal pesticide, BigDecimal heavyMetal,
                                   BigDecimal microbe, BigDecimal tempMax, BigDecimal humMax) {
 
-        int detectionScore = calculateDetectionRisk(pesticide, heavyMetal, microbe);
-        int logisticsScore  = calculateLogisticsRisk(tempMax, humMax);
+        double detectionWeight = parseDouble(configService.getValue("risk.weight.detection"), 70.0) / 100.0;
+        double logisticsWeight = 1.0 - detectionWeight;
 
-        int total = (int) Math.round(detectionScore * 0.7 + logisticsScore * 0.3);
+        int detectionScore = calculateDetectionRisk(pesticide, heavyMetal, microbe);
+        int logisticsScore = calculateLogisticsRisk(tempMax, humMax);
+
+        int total = (int) Math.round(detectionScore * detectionWeight + logisticsScore * logisticsWeight);
         return Math.min(total, 100);
     }
 
     // ==================== 检测指标评分 ====================
 
     private int calculateDetectionRisk(BigDecimal pesticide, BigDecimal heavyMetal, BigDecimal microbe) {
-        double score = calculateSingleScore(pesticide, PESTICIDE_LIMIT) * (WEIGHT_PESTICIDE / 100.0)
-                     + calculateSingleScore(heavyMetal, HEAVY_METAL_LIMIT) * (WEIGHT_HEAVY_METAL / 100.0)
-                     + calculateSingleScore(microbe, MICROBE_LIMIT) * (WEIGHT_MICROBE / 100.0);
+        double score = calculateSingleScore(pesticide, getPesticideLimit()) * (getWeightPesticide() / 100.0)
+                     + calculateSingleScore(heavyMetal, getHeavyMetalLimit()) * (getWeightHeavyMetal() / 100.0)
+                     + calculateSingleScore(microbe, getMicrobeLimit()) * (getWeightMicrobe() / 100.0);
         return (int) Math.round(score);
     }
 
@@ -101,8 +140,8 @@ public class RiskScoring {
     // ==================== 物流环境评分 ====================
 
     private int calculateLogisticsRisk(BigDecimal temperature, BigDecimal humidity) {
-        double score = calculateRangeScore(temperature, TEMP_MIN, TEMP_MAX) * (WEIGHT_TEMP / 100.0)
-                     + calculateRangeScore(humidity, HUMIDITY_MIN, HUMIDITY_MAX) * (WEIGHT_HUMIDITY / 100.0);
+        double score = calculateRangeScore(temperature, getTempMin(), getTempMax()) * (getWeightTemp() / 100.0)
+                     + calculateRangeScore(humidity, getHumidityMin(), getHumidityMax()) * (getWeightHumidity() / 100.0);
         return (int) Math.round(score);
     }
 
@@ -128,9 +167,9 @@ public class RiskScoring {
     // ==================== 风险等级判定 ====================
 
     public String getRiskLevel(int totalScore) {
-        if (totalScore <= RISK_LOW_THRESHOLD) {
+        if (totalScore <= getRiskLowThreshold()) {
             return "Low";
-        } else if (totalScore <= RISK_HIGH_THRESHOLD) {
+        } else if (totalScore <= getRiskHighThreshold()) {
             return "Medium";
         } else {
             return "High";
@@ -146,11 +185,11 @@ public class RiskScoring {
     public String generateRiskFactorsJson(BigDecimal pesticide, BigDecimal heavyMetal,
                                           BigDecimal microbe, BigDecimal tempMax, BigDecimal humMax,
                                           int totalScore) {
-        int ps  = calculateSingleScore(pesticide, PESTICIDE_LIMIT);
-        int hs  = calculateSingleScore(heavyMetal, HEAVY_METAL_LIMIT);
-        int ms  = calculateSingleScore(microbe, MICROBE_LIMIT);
-        int ts  = calculateRangeScore(tempMax, TEMP_MIN, TEMP_MAX);
-        int hms = calculateRangeScore(humMax, HUMIDITY_MIN, HUMIDITY_MAX);
+        int ps  = calculateSingleScore(pesticide, getPesticideLimit());
+        int hs  = calculateSingleScore(heavyMetal, getHeavyMetalLimit());
+        int ms  = calculateSingleScore(microbe, getMicrobeLimit());
+        int ts  = calculateRangeScore(tempMax, getTempMin(), getTempMax());
+        int hms = calculateRangeScore(humMax, getHumidityMin(), getHumidityMax());
 
         return String.format(
             "{\"total_score\":%d,\"risk_level\":\"%s\"," +
@@ -158,5 +197,20 @@ public class RiskScoring {
             "\"logistics\":{\"temperature_score\":%d,\"humidity_score\":%d}}",
             totalScore, getRiskLevel(totalScore), ps, hs, ms, ts, hms
         );
+    }
+
+    private double parseDouble(String s, double defaultVal) {
+        if (s == null) return defaultVal;
+        try { return Double.parseDouble(s); } catch (NumberFormatException e) { return defaultVal; }
+    }
+
+    private int parseInt(String s, int defaultVal) {
+        if (s == null) return defaultVal;
+        try { return Integer.parseInt(s); } catch (NumberFormatException e) { return defaultVal; }
+    }
+
+    private BigDecimal parseNumeric(String s, BigDecimal defaultVal) {
+        if (s == null) return defaultVal;
+        try { return new BigDecimal(s); } catch (NumberFormatException e) { return defaultVal; }
     }
 }

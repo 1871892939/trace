@@ -52,8 +52,17 @@ const router = createRouter({
           path: 'alert/dashboard',
           name: 'AlertDashboard',
           component: () => import('@/views/AlertDashboard.vue')
+        },
+        {
+          path: 'config',
+          name: 'Config',
+          component: () => import('@/views/Config.vue')
         }
       ]
+    },
+    {
+      path: '/config',
+      redirect: '/main/config'
     },
     {
       path: '/overview',

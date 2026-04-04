@@ -8,10 +8,12 @@ import com.ncg.dto.AlertDashboardDTO;
 import com.ncg.dto.AlertListDTO;
 import com.ncg.model.AlertRecord;
 import com.ncg.model.BatchInfo;
+import com.ncg.service.ConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -25,6 +27,9 @@ public class AlertService {
 
     @Autowired
     private BatchInfoMapper batchInfoMapper;
+
+    @Autowired
+    private ConfigService configService;
 
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter D_FORMAT = DateTimeFormatter.ofPattern("MM-dd");
@@ -115,16 +120,20 @@ public class AlertService {
         dto.setTypeDistribution(typeDist);
 
         List<AlertRecord> allAlerts = alertRecordMapper.selectList(null);
+
+        BigDecimal urgentThreshold = configService.getNumericValue("alert.score.urgent", new BigDecimal("0.8"));
+        BigDecimal seriousThreshold = configService.getNumericValue("alert.score.serious", new BigDecimal("0.5"));
+
         long urgent = allAlerts.stream()
-                .filter(a -> a.getRiskScore() != null && a.getRiskScore().compareTo(new BigDecimal("0.8")) >= 0)
+                .filter(a -> a.getRiskScore() != null && a.getRiskScore().compareTo(urgentThreshold) >= 0)
                 .count();
         long serious = allAlerts.stream()
                 .filter(a -> a.getRiskScore() != null
-                        && a.getRiskScore().compareTo(new BigDecimal("0.5")) >= 0
-                        && a.getRiskScore().compareTo(new BigDecimal("0.8")) < 0)
+                        && a.getRiskScore().compareTo(seriousThreshold) >= 0
+                        && a.getRiskScore().compareTo(urgentThreshold) < 0)
                 .count();
         long normal = allAlerts.stream()
-                .filter(a -> a.getRiskScore() == null || a.getRiskScore().compareTo(new BigDecimal("0.5")) < 0)
+                .filter(a -> a.getRiskScore() == null || a.getRiskScore().compareTo(seriousThreshold) < 0)
                 .count();
         dto.setLevelDistribution(new AlertDashboardDTO.LevelDistribution(urgent, serious, normal));
 

@@ -91,6 +91,50 @@ CREATE TABLE `risk_assessment` (
   KEY `idx_assessment_date` (`assessment_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='风险评估表';
 
+-- ==================== 7. 系统配置参数表 ====================
+DROP TABLE IF EXISTS `config_param`;
+CREATE TABLE `config_param` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
+  `param_key` VARCHAR(100) NOT NULL COMMENT '参数唯一标识',
+  `param_name` VARCHAR(100) NOT NULL COMMENT '参数中文名称',
+  `param_value` VARCHAR(500) NOT NULL COMMENT '参数值',
+  `param_type` VARCHAR(20) NOT NULL COMMENT '参数类型：number/string/boolean',
+  `param_group` VARCHAR(50) NOT NULL COMMENT '参数分组：risk/anomaly/alert',
+  `description` VARCHAR(500) DEFAULT NULL COMMENT '参数说明',
+  `editable` TINYINT DEFAULT 1 COMMENT '是否可编辑：0-不可编辑 1-可编辑',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_param_key` (`param_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置参数表';
+
+-- ==================== 初始化系统默认参数 ====================
+INSERT INTO `config_param` (`param_key`, `param_name`, `param_value`, `param_type`, `param_group`, `description`, `editable`) VALUES
+-- 风险评分阈值
+('risk.low.threshold', '低风险阈值', '40', 'number', 'risk', '风险评分低于此值判定为 Low 等级', 1),
+('risk.high.threshold', '高风险阈值', '70', 'number', 'risk', '风险评分高于此值判定为 High 等级', 1),
+('risk.weight.detection', '检测指标权重（%）', '70', 'number', 'risk', '检测指标（农残+重金属+微生物）在总分中的权重占比', 1),
+('risk.weight.pesticide', '农残权重（%）', '35', 'number', 'risk', '农残在检测指标内的权重占比', 1),
+('risk.weight.heavy_metal', '重金属权重（%）', '35', 'number', 'risk', '重金属在检测指标内的权重占比', 1),
+('risk.weight.microbe', '微生物权重（%）', '30', 'number', 'risk', '微生物在检测指标内的权重占比', 1),
+('risk.weight.temp', '温度权重（%）', '60', 'number', 'risk', '温度在物流指标内的权重占比', 1),
+('risk.weight.humidity', '湿度权重（%）', '40', 'number', 'risk', '湿度在物流指标内的权重占比', 1),
+-- 国标限量阈值
+('limit.pesticide', '农残限量阈值（mg/kg）', '0.5', 'number', 'risk', 'GB 2763 农残超标判定阈值', 1),
+('limit.heavy_metal', '重金属限量阈值（mg/kg）', '0.1', 'number', 'risk', 'GB 2762 重金属超标判定阈值', 1),
+('limit.microbe', '微生物限量阈值（CFU/g）', '200', 'number', 'risk', 'GB 29921 微生物超标判定阈值', 1),
+('limit.temp.min', '冷链最低温度（℃）', '0', 'number', 'risk', '冷链适宜温度下限', 1),
+('limit.temp.max', '冷链最高温度（℃）', '10', 'number', 'risk', '冷链适宜温度上限', 1),
+('limit.humidity.min', '适宜湿度下限（%）', '40', 'number', 'risk', '物流适宜湿度下限', 1),
+('limit.humidity.max', '适宜湿度上限（%）', '70', 'number', 'risk', '物流适宜湿度上限', 1),
+-- 异常检测参数
+('anomaly.sigma.warning', '预警σ系数', '2.0', 'number', 'anomaly', '2σ 预警阈值系数（超过 2σ 触发预警）', 0),
+('anomaly.sigma.critical', '异常σ系数', '3.0', 'number', 'anomaly', '3σ 异常阈值系数（超过 3σ 判定为异常）', 0),
+-- 预警阈值
+('alert.score.urgent', '紧急告警分数', '0.8', 'number', 'alert', '风险分数≥此值判定为紧急告警（0-1）', 1),
+('alert.score.serious', '严重告警分数', '0.5', 'number', 'alert', '风险分数≥此值判定为严重告警（0-1）', 1),
+('alert.composite.threshold', '综合预警触发分数', '70', 'number', 'alert', '风险评分高于此值且无具体类型预警时，触发综合预警', 1);
+
 -- ==================== 初始化测试数据 ====================
 
 -- 插入测试用户（密码都是 123456，BCrypt 加密）

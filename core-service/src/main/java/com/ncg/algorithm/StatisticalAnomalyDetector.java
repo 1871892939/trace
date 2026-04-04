@@ -1,6 +1,8 @@
 package com.ncg.algorithm;
 
+import com.ncg.service.ConfigService;
 import com.ncg.model.LogisticsData;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -13,26 +15,26 @@ import java.util.List;
  * 原理：正态分布下，99.73% 的数据落在 μ±3σ 范围内
  * 应用：温度、湿度等物流指标及检测值的动态基线异常检测
  *
- * 接口层次：
- *   - 3σ 异常（isAnomaly）
- *   - 2σ 预警（isWarning）
- *   - 连续异常分数 0-1（calculateAnomalyScore）
- *   - 批量物流检测（detectBatch）
+ * σ 系数从 ConfigService 动态读取，不再硬编码。
  */
 @Component
 public class StatisticalAnomalyDetector {
 
+    @Autowired
+    private ConfigService configService;
+
     /** 3σ 阈值系数 */
-    private static final double SIGMA_COEFFICIENT = 3.0;
+    private double getSigmaCoefficient() {
+        return parseDouble(configService.getValue("anomaly.sigma.critical"), 3.0);
+    }
 
     /** 2σ 阈值系数（用于预警） */
-    private static final double WARNING_SIGMA_COEFFICIENT = 2.0;
+    private double getWarningSigmaCoefficient() {
+        return parseDouble(configService.getValue("anomaly.sigma.warning"), 2.0);
+    }
 
     // ==================== 基础统计 ====================
 
-    /**
-     * 计算均值
-     */
     public double calculateMean(List<Double> values) {
         if (values == null || values.isEmpty()) {
             return 0.0;
@@ -44,9 +46,6 @@ public class StatisticalAnomalyDetector {
         return sum / values.size();
     }
 
-    /**
-     * 计算样本标准差（除以 n-1）
-     */
     public double calculateStdDev(List<Double> values, double mean) {
         if (values == null || values.size() < 2) {
             return 0.0;
@@ -61,36 +60,20 @@ public class StatisticalAnomalyDetector {
 
     // ==================== 单值检测 ====================
 
-    /**
-     * 检测单个值是否异常（3σ 原则）
-     *
-     * @param value  待检测值
-     * @param mean  历史均值
-     * @param stdDev 历史标准差
-     * @return true-异常，false-正常
-     */
     public boolean isAnomaly(double value, double mean, double stdDev) {
         if (stdDev <= 0) {
             return false;
         }
         double deviation = Math.abs(value - mean);
-        return deviation > (SIGMA_COEFFICIENT * stdDev);
+        return deviation > (getSigmaCoefficient() * stdDev);
     }
 
-    /**
-     * 检测单个值是否处于预警状态（2σ 原则）
-     *
-     * @param value  待检测值
-     * @param mean  历史均值
-     * @param stdDev 历史标准差
-     * @return true-预警，false-正常
-     */
     public boolean isWarning(double value, double mean, double stdDev) {
         if (stdDev <= 0) {
             return false;
         }
         double deviation = Math.abs(value - mean);
-        return deviation > (WARNING_SIGMA_COEFFICIENT * stdDev);
+        return deviation > (getWarningSigmaCoefficient() * stdDev);
     }
 
     /**
@@ -104,38 +87,29 @@ public class StatisticalAnomalyDetector {
             return 0.0;
         }
         double sigmaLevel = Math.abs(value - mean) / stdDev;
-        if (sigmaLevel <= WARNING_SIGMA_COEFFICIENT) {
-            return sigmaLevel / WARNING_SIGMA_COEFFICIENT * 0.3;
-        } else if (sigmaLevel <= SIGMA_COEFFICIENT) {
-            return 0.3 + (sigmaLevel - WARNING_SIGMA_COEFFICIENT)
-                         / (SIGMA_COEFFICIENT - WARNING_SIGMA_COEFFICIENT) * 0.4;
+        double warnSigma = getWarningSigmaCoefficient();
+        double critSigma = getSigmaCoefficient();
+
+        if (sigmaLevel <= warnSigma) {
+            return sigmaLevel / warnSigma * 0.3;
+        } else if (sigmaLevel <= critSigma) {
+            return 0.3 + (sigmaLevel - warnSigma) / (critSigma - warnSigma) * 0.4;
         } else {
-            return Math.min(1.0, 0.7 + (sigmaLevel - SIGMA_COEFFICIENT) * 0.1);
+            return Math.min(1.0, 0.7 + (sigmaLevel - critSigma) * 0.1);
         }
     }
 
-    /**
-     * BigDecimal 版本的异常分数
-     */
     public double detect(BigDecimal value, double mean, double stdDev) {
         return calculateAnomalyScore(value.doubleValue(), mean, stdDev);
     }
 
     // ==================== 批量检测（核心方法） ====================
 
-    /**
-     * 批量物流数据统计异常检测
-     * 一次性对一批物流记录做 3σ 建模，返回各维度异常分
-     *
-     * @param records 物流记录列表（同一批次）
-     * @return 批量检测结果
-     */
     public BatchAnomalyResult detectBatch(List<LogisticsData> records) {
         if (records == null || records.isEmpty()) {
             return new BatchAnomalyResult(0.0, 0.0, false, false, 0.0);
         }
 
-        // 提取温度序列和湿度序列
         List<Double> temps = records.stream()
                 .map(r -> r.getTemperature().doubleValue())
                 .toList();
@@ -148,7 +122,6 @@ public class StatisticalAnomalyDetector {
         double humMean = calculateMean(hums);
         double humStd  = calculateStdDev(hums, humMean);
 
-        // 取各时刻异常分，取最大值代表整批最异常状态
         double maxTempScore = temps.stream()
                 .mapToDouble(t -> calculateAnomalyScore(t, tempMean, tempStd))
                 .max().orElse(0.0);
@@ -159,7 +132,6 @@ public class StatisticalAnomalyDetector {
         boolean tempAnomaly = temps.stream().anyMatch(t -> isAnomaly(t, tempMean, tempStd));
         boolean humAnomaly  = hums.stream().anyMatch(h -> isAnomaly(h, humMean, humStd));
 
-        // 综合异常分 = max(温度异常分, 湿度异常分)
         double compositeScore = Math.max(maxTempScore, maxHumScore);
 
         return new BatchAnomalyResult(
@@ -171,12 +143,6 @@ public class StatisticalAnomalyDetector {
         );
     }
 
-    /**
-     * 获取异常等级描述
-     *
-     * @param score 异常分数
-     * @return 等级描述
-     */
     public String getAnomalyLevel(double score) {
         if (score < 0.3) {
             return "NORMAL";
@@ -189,15 +155,6 @@ public class StatisticalAnomalyDetector {
 
     // ==================== 批量检测结果 ====================
 
-    /**
-     * 批量物流检测结果封装
-     *
-     * @param tempAnomalyScore  温度最大异常分 (0-1)
-     * @param humAnomalyScore   湿度最大异常分 (0-1)
-     * @param tempAnomaly       温度是否存在 3σ 异常
-     * @param humAnomaly        湿度是否存在 3σ 异常
-     * @param compositeScore    综合异常分 (0-1)
-     */
     public record BatchAnomalyResult(
             double tempAnomalyScore,
             double humAnomalyScore,
@@ -205,4 +162,9 @@ public class StatisticalAnomalyDetector {
             boolean humAnomaly,
             double compositeScore
     ) {}
+
+    private double parseDouble(String s, double defaultVal) {
+        if (s == null) return defaultVal;
+        try { return Double.parseDouble(s); } catch (NumberFormatException e) { return defaultVal; }
+    }
 }

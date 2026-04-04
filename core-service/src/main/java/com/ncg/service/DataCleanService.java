@@ -5,6 +5,7 @@ import com.ncg.algorithm.RiskScoring;
 import com.ncg.algorithm.StatisticalAnomalyDetector;
 import com.ncg.dal.mapper.*;
 import com.ncg.model.*;
+import com.ncg.service.ConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,9 @@ public class DataCleanService {
 
     @Autowired
     private StatisticalAnomalyDetector anomalyDetector;
+
+    @Autowired
+    private ConfigService configService;
 
     /**
      * 清洗指定批次（算法处理核心入口）
@@ -156,37 +160,43 @@ public class DataCleanService {
                                               int riskScore) {
         List<AlertRecord> alerts = new ArrayList<>();
 
+        java.math.BigDecimal pesticideLimit = configService.getNumericValue("limit.pesticide", new java.math.BigDecimal("0.5"));
+        java.math.BigDecimal heavyMetalLimit = configService.getNumericValue("limit.heavy_metal", new java.math.BigDecimal("0.1"));
+        java.math.BigDecimal microbeLimit = configService.getNumericValue("limit.microbe", new java.math.BigDecimal("200"));
+        int compositeThreshold = configService.getValue("alert.composite.threshold", "70") != null
+                ? Integer.parseInt(configService.getValue("alert.composite.threshold", "70")) : 70;
+
         // 规则触发：农残超标
-        if (detection.getPesticide().doubleValue() > 0.5) {
-            alerts.add(makeAlert(batchId, "PESTICIDE", BigDecimal.ONE.setScale(2, RoundingMode.HALF_UP)));
+        if (detection.getPesticide().compareTo(pesticideLimit) > 0) {
+            alerts.add(makeAlert(batchId, "PESTICIDE", java.math.BigDecimal.ONE.setScale(2, java.math.RoundingMode.HALF_UP)));
         }
 
         // 规则触发：重金属超标
-        if (detection.getHeavyMetal().doubleValue() > 0.1) {
-            alerts.add(makeAlert(batchId, "HEAVY_METAL", new BigDecimal("0.85")));
+        if (detection.getHeavyMetal().compareTo(heavyMetalLimit) > 0) {
+            alerts.add(makeAlert(batchId, "HEAVY_METAL", new java.math.BigDecimal("0.85")));
         }
 
         // 规则触发：微生物超标
-        if (detection.getMicrobe().doubleValue() > 200) {
-            alerts.add(makeAlert(batchId, "MICROBE", new BigDecimal("0.75")));
+        if (detection.getMicrobe().compareTo(microbeLimit) > 0) {
+            alerts.add(makeAlert(batchId, "MICROBE", new java.math.BigDecimal("0.75")));
         }
 
         // 统计异常触发：温度 3σ 异常
         if (anomalyResult.tempAnomaly()) {
             alerts.add(makeAlert(batchId, "TEMP",
-                    BigDecimal.valueOf(anomalyResult.tempAnomalyScore()).setScale(2, RoundingMode.HALF_UP)));
+                    java.math.BigDecimal.valueOf(anomalyResult.tempAnomalyScore()).setScale(2, java.math.RoundingMode.HALF_UP)));
         }
 
         // 统计异常触发：湿度 3σ 异常
         if (anomalyResult.humAnomaly()) {
             alerts.add(makeAlert(batchId, "HUMIDITY",
-                    BigDecimal.valueOf(anomalyResult.humAnomalyScore()).setScale(2, RoundingMode.HALF_UP)));
+                    java.math.BigDecimal.valueOf(anomalyResult.humAnomalyScore()).setScale(2, java.math.RoundingMode.HALF_UP)));
         }
 
         // 高风险无具体预警时，触发综合预警
-        if (riskScore > 70 && alerts.isEmpty()) {
+        if (riskScore > compositeThreshold && alerts.isEmpty()) {
             alerts.add(makeAlert(batchId, "COMPOSITE",
-                    BigDecimal.valueOf(riskScore / 100.0).setScale(2, RoundingMode.HALF_UP)));
+                    java.math.BigDecimal.valueOf(riskScore / 100.0).setScale(2, java.math.RoundingMode.HALF_UP)));
         }
 
         return alerts;

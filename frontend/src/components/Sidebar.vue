@@ -51,8 +51,8 @@
           <el-icon><Setting /></el-icon>
           <span>系统设置</span>
         </template>
-        <el-menu-item index="/system/user">用户管理</el-menu-item>
-        <el-menu-item index="/system/config">参数配置</el-menu-item>
+        <el-menu-item index="/main/user">用户管理</el-menu-item>
+        <el-menu-item index="/main/config">参数配置</el-menu-item>
       </el-sub-menu>
     </el-menu>
 
