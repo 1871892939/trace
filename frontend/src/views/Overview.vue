@@ -135,7 +135,7 @@
       </div>
 
       <!-- 批次列表（溯源详情） -->
-      <div class="batch-table-section">
+      <!-- <div class="batch-table-section">
         <div class="section-header">
           <span class="chart-title">溯源批次详情</span>
           <span class="batch-count">共 {{ overviewData.batchDetails?.length || 0 }} 条记录</span>
@@ -175,7 +175,7 @@
             </template>
           </el-table-column>
         </el-table>
-      </div>
+      </div> -->
     </template>
   </div>
 </template>

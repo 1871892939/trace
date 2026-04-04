@@ -82,10 +82,10 @@ function disconnect() {
     clearTimeout(reconnectTimer)
     reconnectTimer = null
   }
-  if (ws) {
+  if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
     ws.close()
-    ws = null
   }
+  ws = null
 }
 
 function scheduleReconnect() {
