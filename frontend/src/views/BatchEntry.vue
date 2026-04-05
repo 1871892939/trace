@@ -73,7 +73,7 @@
         <div class="section-title">
           <span class="section-dot blue" />
           检测数据
-          <span class="section-optional">（可选）</span>
+          <span class="section-optional"></span>
         </div>
         <div class="section-body">
           <el-row :gutter="24">
@@ -139,7 +139,7 @@
         <div class="section-title">
           <span class="section-dot orange" />
           物流轨迹
-          <span class="section-optional">（可选，可录入多条）</span>
+          <span class="section-optional"></span>
           <el-button type="primary" link size="small" :icon="Plus" @click="addLogisticsRow">
             添加一条
           </el-button>

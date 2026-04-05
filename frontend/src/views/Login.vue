@@ -96,7 +96,7 @@
             </el-form-item>
           </el-form>
 
-          <div class="quick-login">
+          <!-- <div class="quick-login">
             <p class="quick-label">快速登录</p>
             <div class="quick-accounts">
               <div class="quick-chip" @click="quickLogin('admin', '123456')">
@@ -108,7 +108,7 @@
                 <span class="chip-user">supervisor01 / 123456</span>
               </div>
             </div>
-          </div>
+          </div> -->
         </div>
 
         <!-- 注册表单 -->
