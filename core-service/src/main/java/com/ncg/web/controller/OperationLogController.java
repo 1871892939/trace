@@ -21,6 +21,7 @@ public class OperationLogController {
     private OperationLogService operationLogService;
 
     @GetMapping("/list")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "log:list")
     public Map<String, Object> getLogList(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String operationType) {

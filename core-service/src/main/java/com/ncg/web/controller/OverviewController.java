@@ -25,6 +25,7 @@ public class OverviewController {
      * @return 聚合后的概览数据
      */
     @GetMapping("/dashboard")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "overview:dashboard")
     public Map<String, Object> getDashboard() {
         Map<String, Object> result = new HashMap<>();
 

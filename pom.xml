@@ -20,7 +20,7 @@
         <!-- Spring Cloud & Alibaba 版本 -->
         <spring-cloud.version>2021.0.5</spring-cloud.version>
         <spring-cloud-alibaba.version>2021.0.5.0</spring-cloud-alibaba.version>
-        <spring-boot.version>2.7.18</spring-boot.version>
+        <spring-boot.version>2.6.15</spring-boot.version>
         
         <!-- MyBatis-Plus -->
         <mybatis-plus.version>3.5.3.1</mybatis-plus.version>
@@ -34,8 +34,8 @@
         <!-- JWT -->
         <jjwt.version>0.9.1</jjwt.version>
         
-        <!-- Redis -->
-        <redis.version>2.7.18</redis.version>
+        <!-- Sentinel -->
+        <sentinel.version>1.8.8</sentinel.version>
     </properties>
     
     <dependencyManagement>
@@ -93,6 +93,23 @@
                 <groupId>io.jsonwebtoken</groupId>
                 <artifactId>jjwt</artifactId>
                 <version>${jjwt.version}</version>
+            </dependency>
+
+            <!-- Sentinel -->
+            <dependency>
+                <groupId>com.alibaba.csp</groupId>
+                <artifactId>sentinel-core</artifactId>
+                <version>${sentinel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.csp</groupId>
+                <artifactId>sentinel-transport-simple-http</artifactId>
+                <version>${sentinel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.csp</groupId>
+                <artifactId>sentinel-annotation-aspectj</artifactId>
+                <version>${sentinel.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

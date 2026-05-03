@@ -40,6 +40,7 @@ public class BatchController {
     }
 
     @PostMapping("/create")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "batch:create")
     public Map<String, Object> create(@RequestBody BatchCreateRequest req, HttpServletRequest request) {
         Map<String, Object> result = new HashMap<>();
         try {
@@ -55,6 +56,7 @@ public class BatchController {
     }
 
     @PutMapping("/update")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "batch:update")
     public Map<String, Object> update(@RequestBody BatchUpdateRequest req, HttpServletRequest request) {
         Map<String, Object> result = new HashMap<>();
         try {
@@ -70,6 +72,7 @@ public class BatchController {
     }
 
     @DeleteMapping("/{batchId}")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "batch:delete")
     public Map<String, Object> delete(@PathVariable Long batchId) {
         Map<String, Object> result = new HashMap<>();
         try {

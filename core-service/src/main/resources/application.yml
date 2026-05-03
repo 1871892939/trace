@@ -16,9 +16,14 @@ spring:
   redis:
     host: localhost
     port: 6379
-    password: 
+    password:
     database: 0
     timeout: 5000ms
+
+# Sentinel 配置（用 spring.cloud.sentinel 前缀）
+spring.cloud.sentinel:
+  enabled: true
+  dashboard: localhost:8080
   
   # Nacos 配置（暂时注释，单机部署不需要）
   # cloud:
@@ -41,3 +46,5 @@ mybatis-plus:
 jwt:
   secret: trace-food-safety-secret-key-2026
   expiration: 7200000  # 2 小时
+
+# Sentinel 配置

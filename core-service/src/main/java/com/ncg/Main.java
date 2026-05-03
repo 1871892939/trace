@@ -12,6 +12,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @MapperScan("com.ncg.dal.mapper")
 @EnableScheduling
 public class Main {
+    static {
+        System.setProperty("csp.sentinel.dashboard.server", "localhost:8080");
+        System.setProperty("csp.sentinel.heartbeat.interval.ms", "1000");
+        System.setProperty("csp.sentinel.cold.init.time.ms", "5000");
+    }
+
     public static void main(String[] args) {
         SpringApplication.run(Main.class, args);
         System.out.println("===========================================");

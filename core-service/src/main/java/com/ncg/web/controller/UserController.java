@@ -22,6 +22,7 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/list")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "user:list")
     public Map<String, Object> getUserList(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String role,

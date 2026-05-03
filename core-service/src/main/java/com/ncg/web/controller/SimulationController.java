@@ -50,6 +50,7 @@ public class SimulationController {
      * @return 模拟结果
      */
     @PostMapping("/generate")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "simulation:generate")
     public Map<String, Object> generate(@RequestParam("type") String type,
                                         @RequestParam(value = "count", defaultValue = "1") Integer count,
                                         @RequestParam(value = "clean", defaultValue = "true") Boolean clean,

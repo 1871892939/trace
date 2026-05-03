@@ -22,6 +22,7 @@ public class ConfigController {
     private ConfigService configService;
 
     @GetMapping("/list")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "config:list")
     public Map<String, Object> getConfigList(@RequestParam(required = false) String group) {
         Map<String, Object> result = new HashMap<>();
         try {
@@ -52,6 +53,7 @@ public class ConfigController {
     }
 
     @PostMapping("/update")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "config:update")
     public Map<String, Object> updateConfig(@RequestBody ConfigUpdateRequest req) {
         Map<String, Object> result = new HashMap<>();
         try {

@@ -22,6 +22,7 @@ public class TraceController {
     private TraceService traceService;
 
     @GetMapping("/batch/query")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "trace:query")
     public Map<String, Object> queryBatches(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String riskLevel,
@@ -40,6 +41,7 @@ public class TraceController {
     }
 
     @GetMapping("/chain/{batchId}")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "trace:chain")
     public Map<String, Object> getTraceChain(@PathVariable Long batchId) {
         Map<String, Object> result = new HashMap<>();
         try {

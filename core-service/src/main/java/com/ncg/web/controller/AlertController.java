@@ -22,6 +22,7 @@ public class AlertController {
     private AlertService alertService;
 
     @GetMapping("/list")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "alert:list")
     public Map<String, Object> getAlertList(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String alertType,
@@ -40,6 +41,7 @@ public class AlertController {
     }
 
     @PostMapping("/handle/{alertId}")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "alert:handle")
     public Map<String, Object> handleAlert(@PathVariable Long alertId) {
         Map<String, Object> result = new HashMap<>();
         try {
@@ -59,6 +61,7 @@ public class AlertController {
     }
 
     @GetMapping("/dashboard")
+    @com.alibaba.csp.sentinel.annotation.SentinelResource(value = "alert:dashboard")
     public Map<String, Object> getDashboard() {
         Map<String, Object> result = new HashMap<>();
         try {
