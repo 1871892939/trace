@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>core-service</module>
+        <module>gateway-service</module>
     </modules>
 
     <properties>
